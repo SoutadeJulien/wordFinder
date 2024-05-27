@@ -21,6 +21,7 @@ class SearchPathWindow(QtWidgets.QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
 
+        # test comment
         self._setupUi()
         self._connectUi()
 

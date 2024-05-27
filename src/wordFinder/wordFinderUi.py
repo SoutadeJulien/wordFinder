@@ -28,7 +28,7 @@ class WordFinder(QtWidgets.QDialog):
         self.moduleToCheckLabel = QtWidgets.QLabel("Modules to check")
         self.modulesWidget = widgets.ModulesWidget(self.searchPath)
         self.devModeCheckBox = QtWidgets.QCheckBox("Dev mode")
-        self.showCommentCheckBox = QtWidgets.QCheckBox("Show special characters")
+        self.showCommentCheckBox = QtWidgets.QCheckBox("Show comments")
         self.showContextCheckBox = QtWidgets.QCheckBox("Show context")
         self.contextNumber = QtWidgets.QComboBox()
         self.checkButton = QtWidgets.QPushButton('check')
@@ -121,7 +121,7 @@ class WordFinder(QtWidgets.QDialog):
         modulesWithPrints = []
 
         for module, modulePath in self.filteredModules.items():
-            with open(modulePath, 'r') as reader:
+            with open(modulePath, 'r', encoding='utf-8') as reader:
                 lines = reader.readlines()
                 for lineNumber, line in enumerate(lines, start=1):
                     if self.showCommentCheckBox.isChecked():
@@ -137,19 +137,24 @@ class WordFinder(QtWidgets.QDialog):
                                 self.displayNextLines(modulePath, lineNumber)
 
                     else:
-                        if word in line and constants.EXCLUDED_CHARACTERS not in line:
-
-                            if self.showContextCheckBox.isChecked():
-                                self.displayPreviousLines(modulePath, lineNumber)
-
-                            self.output.appendHtml("<font color='green'>{}</font> <span>&#8594;</span> <font color='yellow'>line {}</font> <span>&#8594;</span> <font color='white'>{}</font>".format(module, lineNumber, line))
-                            modulesWithPrints.append(module)
-
-                            if self.showContextCheckBox.isChecked():
-                                self.displayNextLines(modulePath, lineNumber)
+                        if word in line:
+                            if self.isLineValid(line):
+                                if self.showContextCheckBox.isChecked():
+                                    self.displayPreviousLines(modulePath, lineNumber)
+                                self.output.appendHtml("<font color='green'>{}</font> <span>&#8594;</span> <font color='yellow'>line {}</font> <span>&#8594;</span> <font color='white'>{}</font>".format(module, lineNumber, line))
+                                modulesWithPrints.append(module)
+                                if self.showContextCheckBox.isChecked():
+                                    self.displayNextLines(modulePath, lineNumber)
 
         if not modulesWithPrints:
             self.output.appendPlainText('The word [{}] is not found'.format(word))
+
+    @staticmethod
+    def isLineValid(line):
+        for char in constants.EXCLUDED_CHARACTERS:
+            if char in line:
+                return False
+        return True
 
     @property
     def filteredModules(self) -> Mapping[str, str]:
@@ -171,7 +176,7 @@ class WordFinder(QtWidgets.QDialog):
 
 
     def displayPreviousLines(self, module, lineNumber):
-        with open(module, 'r') as readFile:
+        with open(module, 'r', encoding='utf-8') as readFile:
             lines = readFile.readlines()
             index = int(self.contextNumber.currentText())
 
@@ -184,7 +189,7 @@ class WordFinder(QtWidgets.QDialog):
                         break
 
     def displayNextLines(self, module, lineNumber):
-        with open(module, 'r') as readFile:
+        with open(module, 'r', encoding='utf-8') as readFile:
             lines = readFile.readlines()
             index = 1
 
@@ -196,6 +201,3 @@ class WordFinder(QtWidgets.QDialog):
                     if index == int(self.contextNumber.currentText()) + 1:
                         self.output.appendHtml('')
                         break
-
-
-
