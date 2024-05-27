@@ -37,6 +37,8 @@ class SearchPathWindow(QtWidgets.QDialog):
         self.buttonLayout.addWidget(self.acceptButton)
         self.buttonLayout.addWidget(self.cancelButton)
 
+        self.setWindowTitle("Add new search path")
+
     def _connectUi(self):
         self.acceptButton.clicked.connect(self.newPath)
         self.cancelButton.clicked.connect(self.reject)
@@ -76,6 +78,7 @@ class ModulesWidget(QtWidgets.QWidget):
         self.addModules()
 
     def addModules(self):
+        self.allCheckBoxes.clear()
         if self.mainLayout.count():
             for index in range(self.mainLayout.count()):
                 item = self.mainLayout.itemAt(index)

@@ -37,7 +37,6 @@ class WordFinder(QtWidgets.QDialog):
         self.setSearchPathButton = QtWidgets.QPushButton("Change search path")
         self.checkAllButton = QtWidgets.QPushButton("Check all")
         self.uncheckAllButton = QtWidgets.QPushButton("Uncheck all")
-        self.checkGolgothButton = QtWidgets.QPushButton("Check Golgoth stuff")
         self.separatorOne = widgets.SunkenHSeparator()
         self.separatorTwo = widgets.SunkenHSeparator()
 
@@ -51,7 +50,6 @@ class WordFinder(QtWidgets.QDialog):
         self.mainLayout.addLayout(self.checkButtonLayout)
         self.checkButtonLayout.addWidget(self.checkAllButton, 0, 0)
         self.checkButtonLayout.addWidget(self.uncheckAllButton, 0, 1)
-        self.checkButtonLayout.addWidget(self.checkGolgothButton, 1, 0)
         self.mainLayout.addLayout(self.optionLayout)
         self.optionLayout.addWidget(self.showCommentCheckBox)
         self.optionLayout.addWidget(self.showContextCheckBox)
@@ -82,6 +80,7 @@ class WordFinder(QtWidgets.QDialog):
         self.contextNumber.setCurrentIndex(3)
 
         self.resize(1300, 800)
+        self.setWindowTitle("Word finder")
         self.setWindowFlag(QtCore.Qt.WindowMinimizeButtonHint, True)
 
     def _connectUi(self) -> None:
@@ -90,7 +89,6 @@ class WordFinder(QtWidgets.QDialog):
         self.checkButton.clicked.connect(self.searchWord)
         self.checkAllButton.clicked.connect(self.checkAllCheckBoxes)
         self.uncheckAllButton.clicked.connect(self.uncheckAllCheckBoxes)
-        self.checkGolgothButton.clicked.connect(self.checkGolgothStuff)
 
     def _devMode(self):
         wordFinderUtils.DEV_MODE = self.devModeCheckBox.isChecked()
@@ -113,15 +111,6 @@ class WordFinder(QtWidgets.QDialog):
 
     def uncheckAllCheckBoxes(self) -> None:
         for checkBox in self.modulesWidget.allCheckBoxes:
-            checkBox.setChecked(False)
-
-    def checkGolgothStuff(self) -> None:
-        for checkBox in self.modulesWidget.allCheckBoxes:
-            text = checkBox.text()
-            if 'golgoth' in text or 'lhorda' in text or 'Lhorda' in text:
-                checkBox.setChecked(True)
-                continue
-
             checkBox.setChecked(False)
 
     @wordFinderUtils.devMode(wordFinderUtils.timed)
@@ -148,7 +137,7 @@ class WordFinder(QtWidgets.QDialog):
                                 self.displayNextLines(modulePath, lineNumber)
 
                     else:
-                        if word in line and line not in constants.EXCLUDED_CHARACTERS:
+                        if word in line and constants.EXCLUDED_CHARACTERS not in line:
 
                             if self.showContextCheckBox.isChecked():
                                 self.displayPreviousLines(modulePath, lineNumber)
