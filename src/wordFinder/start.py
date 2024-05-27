@@ -1,6 +1,20 @@
+import sys
+import os
+
 from PySide2 import QtWidgets
 from PySide2.QtGui import QPalette, QColor
 from PySide2.QtCore import Qt
+
+wordFinderPath = os.path.dirname(os.path.abspath(os.path.dirname(__file__)))
+
+def isPathAppended():
+    for modulePath in sys.path:
+        if modulePath == wordFinderPath:
+            return True
+    return False
+
+if not isPathAppended():
+    sys.path.append(wordFinderPath)
 
 from wordFinder import wordFinderUi
 
