@@ -4,7 +4,6 @@ from PySide2.QtCore import Qt
 
 from wordFinder import wordFinderUi
 
-
 qApp = QtWidgets.QApplication()
 qApp.setStyle("Fusion")
 
