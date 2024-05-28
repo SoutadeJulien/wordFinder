@@ -2,7 +2,6 @@ import os
 from PySide2 import QtWidgets, QtCore
 from typing import Optional
 
-import constants
 from wordFinder.utils import wordFinderUtils
 
 
@@ -14,6 +13,53 @@ class SunkenHSeparator(QtWidgets.QFrame):
 
         self.setFrameShape(QtWidgets.QFrame.HLine)
         self.setFrameShadow(QtWidgets.QFrame.Sunken)
+
+
+class ModuleLayoutWindow(QtWidgets.QDialog):
+    """This widget is responsible for the layout management of the modules"""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self._buildWindow()
+        self._setupWindow()
+        self._connectWindow()
+
+    def _buildWindow(self) -> None:
+        self.mainLayout = QtWidgets.QGridLayout(self)
+
+        self.columnsLabel = QtWidgets.QLabel('Columns')
+        self.columnCount = QtWidgets.QLabel()
+        self.columnsSlider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
+
+        self.okButton = QtWidgets.QPushButton('Ok')
+        self.cancelButton = QtWidgets.QPushButton('Cancel')
+
+    def _setupWindow(self) -> None:
+        self.mainLayout.addWidget(self.columnsLabel, 0, 0)
+        self.mainLayout.addWidget(self.columnsSlider, 1, 0)
+        self.mainLayout.addWidget(self.columnCount, 1, 1)
+        self.mainLayout.addWidget(self.okButton, 4, 0)
+        self.mainLayout.addWidget(self.cancelButton, 4, 1)
+
+        self.columnsSlider.setMinimum(1)
+        self.columnsSlider.setMaximum(10)
+        self.columnsSlider.setValue(5)
+        self.columnCount.setText('5')
+
+    def _connectWindow(self) -> None:
+        self.columnsSlider.valueChanged.connect(self.getColumnSliderValue)
+        self.okButton.clicked.connect(self.accept)
+        self.cancelButton.clicked.connect(self.reject)
+
+    def getColumnSliderValue(self) -> int:
+        """Gets the value of the :attr:`columnsSlider` and sets it to the :attr:`columnCount`.
+
+        Returns:
+            The :attr:`columnsSlider`'s value.
+        """
+        value = self.columnsSlider.value()
+        self.columnCount.setText(str(value))
+        return value
 
 
 class SearchPathWindow(QtWidgets.QDialog):
@@ -45,7 +91,7 @@ class SearchPathWindow(QtWidgets.QDialog):
         self.acceptButton.clicked.connect(self.newPath)
         self.cancelButton.clicked.connect(self.reject)
 
-    def newPath(self) -> None:
+    def newPath(self) -> str:
         """Gets if the path wrote in the LineEdit is valid, then, adds the new search path in the config.json.
 
         Returns:
@@ -86,9 +132,9 @@ class ModulesWidget(QtWidgets.QWidget):
 
         self.mainLayout = QtWidgets.QGridLayout(self)
 
-        self.addModules()
+        self.addModules(5)
 
-    def addModules(self) -> None:
+    def addModules(self, columnMax: int) -> None:
         """Adds the modules within the :attr:`searchPath` to the main layout."""
         self.clearLayout()
 
@@ -106,7 +152,7 @@ class ModulesWidget(QtWidgets.QWidget):
             self.allCheckBoxes.append(checkBox)
 
             column += 1
-            if column == 5:
+            if column == columnMax:
                 column = 0
                 row += 1
 

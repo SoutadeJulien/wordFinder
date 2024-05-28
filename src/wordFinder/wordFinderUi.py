@@ -6,6 +6,7 @@ from typing import Mapping
 import constants
 import widgets
 from utils import wordFinderUtils
+from wordFinder import resources
 
 
 LOGGER = logging.getLogger(__name__)
@@ -31,6 +32,8 @@ class WordFinder(QtWidgets.QDialog):
         self.checkButtonLayout = QtWidgets.QGridLayout()
         self.optionLayout = QtWidgets.QHBoxLayout()
 
+        self.menuBar = QtWidgets.QMenuBar()
+
         self.searchPathLabel = QtWidgets.QLabel()
         self.moduleToCheckLabel = QtWidgets.QLabel("Modules to check")
         self.modulesWidget = widgets.ModulesWidget(self.searchPath)
@@ -48,6 +51,7 @@ class WordFinder(QtWidgets.QDialog):
         self.separatorTwo = widgets.SunkenHSeparator()
 
     def _setupUi(self) -> None:
+        self.mainLayout.addWidget(self.menuBar)
         self.mainLayout.addLayout(self.devModeLayout)
         self.devModeLayout.addWidget(self.devModeCheckBox)
         self.mainLayout.addLayout(self.searchPathLayout)
@@ -72,6 +76,11 @@ class WordFinder(QtWidgets.QDialog):
         self.optionLayout.addStretch()
         self.searchPathLayout.addStretch()
 
+        self.uiSetup = self.menuBar.addMenu('Options')
+        self.devModeAction = self.uiSetup.addAction('Dev mode')
+        self.devModeAction.setData(False)
+        self.layoutAction = self.uiSetup.addAction('Layout')
+
         self.showCommentCheckBox.setChecked(True)
         self.searchPathLabel.setText("Search path: {}".format(self.searchPath))
         self.moduleToCheckLabel.setAlignment(QtCore.Qt.AlignCenter)
@@ -93,7 +102,8 @@ class WordFinder(QtWidgets.QDialog):
         self.setWindowFlag(QtCore.Qt.WindowMinimizeButtonHint, True)
 
     def _connectUi(self) -> None:
-        self.devModeCheckBox.clicked.connect(self._devMode)
+        self.devModeAction.triggered.connect(self._devMode)
+        self.layoutAction.triggered.connect(self.onLayoutActionTriggered)
         self.setSearchPathButton.clicked.connect(self.setSearchPath)
         self.checkButton.clicked.connect(self.searchWord)
         self.checkAllButton.clicked.connect(self.checkAllCheckBoxes)
@@ -104,14 +114,24 @@ class WordFinder(QtWidgets.QDialog):
 
         Basically, the dev mode will activate the @wordFinderUtils.devMode decorator and set to DEBUG the :const:LOGGER logger.
         """
-        wordFinderUtils.DEV_MODE = self.devModeCheckBox.isChecked()
+        wordFinderUtils.DEV_MODE = not self.devModeAction.data()
 
         if wordFinderUtils.DEV_MODE:
+            self.devModeAction.setIcon(QtGui.QIcon("wfIcons:check.png"))
             LOGGER.setLevel(10)
         else:
+            self.devModeAction.setIcon(QtGui.QIcon(""))
             LOGGER.setLevel(20)
 
+        self.devModeAction.setData(wordFinderUtils.DEV_MODE)
+
         LOGGER.debug("Dev mode: {}".format(wordFinderUtils.DEV_MODE))
+
+    def onLayoutActionTriggered(self) -> None:
+        """Opens a window to manage the module's layout."""
+        layoutWindow = widgets.ModuleLayoutWindow(self)
+        layoutWindow.exec_()
+        self.modulesWidget.addModules(layoutWindow.getColumnSliderValue())
 
     def setSearchPath(self) -> None:
         """Opens a new window to let the user write the path where to query the modules."""
@@ -131,7 +151,7 @@ class WordFinder(QtWidgets.QDialog):
         self.modulesWidget.searchPath = modulePath
         self.searchPath = modulePath
         self.searchPathLabel.setText("Search path: {}".format(self.searchPath))
-        self.modulesWidget.addModules()
+        self.modulesWidget.addModules(5)
         
     def checkAllCheckBoxes(self) -> None:
         """Checks all checkBoxes"""
@@ -154,7 +174,6 @@ class WordFinder(QtWidgets.QDialog):
         modulesWithPrints = []
 
         for module, modulePath in self.filteredModules.items():
-            print(modulePath)
             with open(modulePath, 'r', encoding='utf-8') as reader:
                 lines = reader.readlines()
                 for lineNumber, line in enumerate(lines, start=1):
