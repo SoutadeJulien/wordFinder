@@ -154,6 +154,7 @@ class WordFinder(QtWidgets.QDialog):
         modulesWithPrints = []
 
         for module, modulePath in self.filteredModules.items():
+            print(modulePath)
             with open(modulePath, 'r', encoding='utf-8') as reader:
                 lines = reader.readlines()
                 for lineNumber, line in enumerate(lines, start=1):
@@ -211,6 +212,11 @@ class WordFinder(QtWidgets.QDialog):
         for checkBox in self.modulesWidget.allCheckBoxes:
             if not checkBox.isChecked():
                 continue
+
+            if os.path.isfile(checkBox.path):
+                if os.path.splitext(checkBox.path)[-1] == '.py':
+                    allModules[checkBox.path.split(os.sep)[-1]] = checkBox.path
+
             for root, dirs, files in os.walk(checkBox.path):
                 for directory in dirs:
                     if directory in constants.EXCLUDED_DIRECTORIES:
