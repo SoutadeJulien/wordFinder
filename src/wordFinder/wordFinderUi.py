@@ -236,7 +236,7 @@ class WordFinder(QtWidgets.QDialog):
 
             for number, line in enumerate(lines, start=1):
                 if number == lineNumber - index:
-                    self.output.appendHtml("<font color='grey'>{}</font> <span>&#8594;</span> <font color='grey'>line {}</font> <span>&#8594;</span> <font color='grey'>{}</font>".format(module.split('\\')[-1], number, line))
+                    self.output.appendHtml("<font color='grey'>{}</font> <span>&#8594;</span> <font color='grey'>line {}</font> <span>&#8594;</span> <font color='grey'>{}</font>".format(modulePath.split('\\')[-1], number, line))
                     index -= 1
 
                     if index == 0:
@@ -255,7 +255,7 @@ class WordFinder(QtWidgets.QDialog):
 
             for number, line in enumerate(lines, start=1):
                 if number == lineNumber + index:
-                    self.output.appendHtml("<font color='grey'>{}</font> <span>&#8594;</span> <font color='grey'>line {}</font> <span>&#8594;</span> <font color='grey'>{}</font>".format(module.split('\\')[-1], number, line))
+                    self.output.appendHtml("<font color='grey'>{}</font> <span>&#8594;</span> <font color='grey'>line {}</font> <span>&#8594;</span> <font color='grey'>{}</font>".format(modulePath.split('\\')[-1], number, line))
                     index += 1
 
                     if index == int(self.contextNumberComboBox.currentText()) + 1:
