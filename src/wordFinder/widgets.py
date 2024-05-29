@@ -3,6 +3,7 @@ from PySide2 import QtWidgets, QtCore
 from typing import Optional
 
 from wordFinder.utils import wordFinderUtils
+from wordFinder import constants
 
 
 class SunkenHSeparator(QtWidgets.QFrame):
@@ -147,8 +148,8 @@ class ModulesWidget(QtWidgets.QWidget):
         for module in self.modules():
             checkBox = CheckBox(module)
             checkBox.path = os.path.join(self.searchPath, module)
-            self.mainLayout.addWidget(checkBox, row, column)
 
+            self.mainLayout.addWidget(checkBox, row, column)
             self.allCheckBoxes.append(checkBox)
 
             column += 1
@@ -171,4 +172,5 @@ class ModulesWidget(QtWidgets.QWidget):
             return None
 
         for module in os.listdir(self.searchPath):
-            yield module
+            if os.path.isdir(os.path.join(self.searchPath, module)) and module not in constants.EXCLUDED_MODULES:
+                yield module

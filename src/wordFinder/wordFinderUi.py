@@ -240,9 +240,9 @@ class WordFinder(QtWidgets.QDialog):
                     if directory in constants.EXCLUDED_DIRECTORIES:
                         continue
 
-                    for file in files:
-                        if os.path.splitext(file)[-1] == '.py':
-                            allModules[file] = os.path.join(root, file)
+                for file in files:
+                    if os.path.splitext(file)[-1] == '.py':
+                        allModules[file] = os.path.join(root, file)
 
         LOGGER.debug("Checked modules: {}".format(allModules))
         return allModules
