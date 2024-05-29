@@ -37,7 +37,6 @@ class WordFinder(QtWidgets.QDialog):
         self.searchPathLabel = QtWidgets.QLabel()
         self.moduleToCheckLabel = QtWidgets.QLabel("Modules to check")
         self.modulesWidget = widgets.ModulesWidget(self.searchPath)
-        self.devModeCheckBox = QtWidgets.QCheckBox("Dev mode")
         self.showCommentCheckBox = QtWidgets.QCheckBox("Show comments")
         self.showContextCheckBox = QtWidgets.QCheckBox("Show context")
         self.contextNumberComboBox = QtWidgets.QComboBox()
@@ -53,7 +52,6 @@ class WordFinder(QtWidgets.QDialog):
     def _setupUi(self) -> None:
         self.mainLayout.addWidget(self.menuBar)
         self.mainLayout.addLayout(self.devModeLayout)
-        self.devModeLayout.addWidget(self.devModeCheckBox)
         self.mainLayout.addLayout(self.searchPathLayout)
         self.searchPathLayout.addWidget(self.setSearchPathButton)
         self.searchPathLayout.addWidget(self.searchPathLabel)
@@ -99,6 +97,7 @@ class WordFinder(QtWidgets.QDialog):
         # Window.
         self.resize(1300, 800)
         self.setWindowTitle("Word finder")
+        self.setWindowIcon(QtGui.QIcon("wfIcons:w.png"))
         self.setWindowFlag(QtCore.Qt.WindowMinimizeButtonHint, True)
 
     def _connectUi(self) -> None:
