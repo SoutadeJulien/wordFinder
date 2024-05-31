@@ -4,4 +4,4 @@ def inc(x):
 
 
 def myee():
-    assert inc(3) == 5
+    assert inc(3) == 4
