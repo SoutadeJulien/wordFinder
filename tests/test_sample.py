@@ -3,5 +3,5 @@ def inc(x):
     return x + 1
 
 
-def myee():
+def test_mytest():
     assert inc(3) == 4
