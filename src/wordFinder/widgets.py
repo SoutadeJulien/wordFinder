@@ -1,6 +1,6 @@
 import os
 from PySide2 import QtWidgets, QtCore
-from typing import Optional
+from typing import Optional, List
 
 import core
 from constants import COLUMN_COUNT
@@ -9,7 +9,7 @@ from wordFinder import constants
 
 
 class SunkenHSeparator(QtWidgets.QFrame):
-    """A simple separator"""
+    """A basic separator"""
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent=parent)
@@ -110,6 +110,9 @@ class SearchPathWindow(QtWidgets.QDialog):
             # Emit signal to refresh the ui.
             self.searchPathAdded.emit(newPath)
 
+            # Reset the checked modules list.
+            core.storeConfig(constants.CHECKED_MODULES, None)
+
             return self.searchPathLineEdit.text()
 
 
@@ -134,16 +137,17 @@ class ModulesWidget(QtWidgets.QWidget):
 
         self.searchPath = searchPath
         self.allCheckBoxes = []
+        self.checkedCheckBoxes = []
 
         self.mainLayout = QtWidgets.QGridLayout(self)
 
         self.addModules()
 
-    def addModules(self) -> None:
+    def addModules(self) -> Optional[List[str]]:
         """Adds the modules within the :attr:`searchPath` to the main layout."""
         self.clearLayout()
 
-        columnMax = core.getConfig()[COLUMN_COUNT]
+        columnMax = core.getConfigByName(COLUMN_COUNT)
         row = 0
         column = 0
 
@@ -154,6 +158,10 @@ class ModulesWidget(QtWidgets.QWidget):
             checkBox = CheckBox(module)
             checkBox.path = os.path.join(self.searchPath, module)
 
+            # Check the checkBox if it's previously checked.
+            if self.isCheckBoxPreviouslyChecked(checkBox):
+                checkBox.setChecked(True)
+
             self.mainLayout.addWidget(checkBox, row, column)
             self.allCheckBoxes.append(checkBox)
 
@@ -161,6 +169,25 @@ class ModulesWidget(QtWidgets.QWidget):
             if column == columnMax:
                 column = 0
                 row += 1
+
+    @staticmethod
+    def isCheckBoxPreviouslyChecked(checkBox: QtWidgets.QCheckBox) -> bool:
+        """Gets if the provided checkBox is present in the config file, if it is, sets it to checked.
+
+        Parameters:
+            checkBox: The checkBox to search.
+
+        Returns:
+            True if the checkBox is present in the config file, else False.
+        """
+        checkedBoxes = core.getConfigByName(constants.CHECKED_MODULES)
+
+        if not checkedBoxes:
+            return False
+
+        if checkBox.text() in checkedBoxes:
+            return True
+
 
     def clearLayout(self) -> None:
         """Clears the main layout."""
