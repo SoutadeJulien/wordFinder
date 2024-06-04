@@ -1,14 +1,13 @@
 import os
 import logging
 from PySide2 import QtWidgets, QtCore, QtGui
-from typing import Mapping
+from typing import Mapping, List
 import re
 
 import constants
 import widgets
 import core
 
-from constants import DEV_MODE, COLUMN_COUNT
 from utils import wordFinderUtils
 from wordFinder import resources
 
@@ -19,11 +18,14 @@ logging.basicConfig(filename='./utils/wordFinder.log', level=logging.INFO)
 
 
 class WordFinder(QtWidgets.QDialog):
+
+    closed = QtCore.Signal()
+
     """Main ui class."""
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
 
-        self.searchPath = core.searchPath()
+        self.searchPath = core.getConfigByName(constants.SEARCH_PATH)
 
         self._buildUi()
         self._setupUi()
@@ -43,16 +45,13 @@ class WordFinder(QtWidgets.QDialog):
         self.modulesWidget = widgets.ModulesWidget(self.searchPath)
 
         self.searchModeGroup = QtWidgets.QGroupBox()
-        self.searchModeGroup.setTitle("Search mode")
         self.radioSearchModeLayout = QtWidgets.QHBoxLayout(self.searchModeGroup)
 
-        self.literalCheckBox = QtWidgets.QRadioButton("Literal")
+        self.literalCheckBox = QtWidgets.QRadioButton("Classic")
         self.regexCheckBox = QtWidgets.QRadioButton("Regex")
 
         self.radioSearchModeLayout.addWidget(self.literalCheckBox)
         self.radioSearchModeLayout.addWidget(self.regexCheckBox)
-
-        self.radioSearchModeLayout.addStretch()
 
         self.showCommentCheckBox = QtWidgets.QCheckBox("Show comments")
 
@@ -89,6 +88,9 @@ class WordFinder(QtWidgets.QDialog):
         self.mainLayout.addWidget(self.output)
         self.mainLayout.addWidget(self.checkButton)
 
+        self.searchModeGroup.setTitle("Search mode")
+        self.radioSearchModeLayout.addStretch()
+
         self.optionLayout.addStretch()
         self.searchPathLayout.addStretch()
 
@@ -97,7 +99,7 @@ class WordFinder(QtWidgets.QDialog):
         self.devModeAction = self.uiSetup.addAction('Dev mode')
         self.devModeAction.setData(False)
 
-        if core.getConfig()[DEV_MODE]:
+        if core.getConfigByName(constants.DEV_MODE):
             self.devModeAction.trigger()
 
         self.layoutAction = self.uiSetup.addAction('Layout')
@@ -119,13 +121,14 @@ class WordFinder(QtWidgets.QDialog):
 
         self.literalCheckBox.setChecked(True)
 
-        # Window.
+        # Main window.
         self.resize(1300, 800)
         self.setWindowTitle("Word finder")
         self.setWindowIcon(QtGui.QIcon("wfIcons:w.png"))
         self.setWindowFlag(QtCore.Qt.WindowMinimizeButtonHint, True)
 
     def _connectUi(self) -> None:
+        self.closed.connect(self.saveCheckedModules)
         self.devModeAction.triggered.connect(self._devMode)
         self.layoutAction.triggered.connect(self.onLayoutActionTriggered)
         self.setSearchPathButton.clicked.connect(self.setSearchPath)
@@ -133,11 +136,20 @@ class WordFinder(QtWidgets.QDialog):
         self.checkAllButton.clicked.connect(self.checkAllCheckBoxes)
         self.uncheckAllButton.clicked.connect(self.uncheckAllCheckBoxes)
 
-    @wordFinderUtils.storeConfig(DEV_MODE)
+    def closeEvent(self, event: QtGui.QCloseEvent) -> None:
+        event.accept()
+        self.closed.emit()
+
+    @wordFinderUtils.storeConfig(constants.CHECKED_MODULES)
+    def saveCheckedModules(self) -> List[str]:
+        """Gets the checked checkBoxes and save them within the config file."""
+        return [checkBox.text() for checkBox in self.modulesWidget.allCheckBoxes if checkBox.isChecked()]
+
+    @wordFinderUtils.storeConfig(constants.DEV_MODE)
     def _devMode(self) -> bool:
         """This method handle the dev mode.
 
-        Basically, the dev mode will activate the @wordFinderUtils.devMode decorator and set to DEBUG the :const:LOGGER logger.
+        Basically, the dev mode will activate the :func:`wordFinderUtils.devMode` decorator and set to DEBUG the :const:LOGGER logger.
 
         Returns:
             The dev mode state.
@@ -147,6 +159,7 @@ class WordFinder(QtWidgets.QDialog):
         if wordFinderUtils.DEV_MODE:
             self.devModeAction.setIcon(QtGui.QIcon("wfIcons:check.png"))
             LOGGER.setLevel(10)
+
         else:
             self.devModeAction.setIcon(QtGui.QIcon(""))
             LOGGER.setLevel(20)
@@ -161,6 +174,8 @@ class WordFinder(QtWidgets.QDialog):
         """Opens a window to manage the module's layout."""
         layoutWindow = widgets.ModuleLayoutWindow(self)
         layoutWindow.exec_()
+
+        # Set the modules with the new layout configuration.
         self.modulesWidget.addModules()
 
     def setSearchPath(self) -> None:
@@ -168,6 +183,8 @@ class WordFinder(QtWidgets.QDialog):
         pathWindow = widgets.SearchPathWindow()
         pathWindow.searchPathAdded.connect(self.refreshModules)
         pathWindow.exec_()
+
+        # Set the new search path.
         self.searchPath = pathWindow.newPath()
 
         LOGGER.debug("Search path: {}".format(self.searchPath))
@@ -237,7 +254,18 @@ class WordFinder(QtWidgets.QDialog):
         if not modulesWithPrints:
             self.output.appendPlainText('The word [{}] is not found'.format(word))
 
-    def wordInLine(self, word, line):
+    def wordInLine(self, word: str, line: str) -> bool:
+        """Gets if the provided line contains the provided word.
+
+        There is two way to search the word, with a simple check or with a regex.
+
+        Parameters:
+            word: The word to search.
+            line: The line that is used to search for the word.
+
+        Returns:
+            True if the line contains the word, else False.
+        """
         if self.literalCheckBox.isChecked():
             if word in line:
                 return True
@@ -253,6 +281,11 @@ class WordFinder(QtWidgets.QDialog):
     @staticmethod
     def isLineValid(line: str) -> bool:
         """Checks if the provided word or sentence contains an excluded character.
+
+        This method is used to get if the tool can output a line that contains a comment or a docstring.
+
+        Parameters:
+            line: The line to check.
 
         Returns:
             True if the :param:`line` does not contain any excluded characters, else, False.

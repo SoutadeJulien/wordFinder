@@ -9,10 +9,12 @@ EXCLUDED_CHARACTERS = (r"""/""", r"#",)
 SEARCH_PATH = '__search_path__'
 DEV_MODE = '__dev_mode__'
 COLUMN_COUNT = '__column_layout__'
+CHECKED_MODULES = '__checked_modules__'
 
 DEFAULT_CONFIG = {
-    "__search_path__": "",
-    "__dev_mode__": False,
-    "__column_layout__": 5
+    SEARCH_PATH: "",
+    DEV_MODE: False,
+    COLUMN_COUNT: 5,
+    CHECKED_MODULES: []
 }
 

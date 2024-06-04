@@ -36,7 +36,7 @@ def storeConfig(descriptionName: str) -> Callable[..., F]:
             result = func(*args, **kwargs)
 
             # Avoid path overwrite if the result is an empty string.
-            if result:
+            if result != '':
                 core.storeConfig(descriptionName, result)
 
             return result

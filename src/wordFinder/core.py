@@ -5,49 +5,52 @@ from typing import Optional, Mapping, Union
 import constants
 
 
-def makeDefaultConfig():
-    with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'utils/config.json'), 'w') as writeFile:
+CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'utils/config.json')
+
+
+def makeDefaultConfig() -> None:
+    """Create a default config.json."""
+    with open(CONFIG_PATH, 'w') as writeFile:
         json.dump(constants.DEFAULT_CONFIG, writeFile, indent=4)
 
 
-def searchPath() -> Optional[str]:
-    """Gets the __search_path__ value from the config.json.
-
-    Returns:
-        The actual search path.
-    """
-    with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'utils/config.json'), 'r') as readFile:
-        settings = json.load(readFile)
-        return settings.get('__search_path__', None)
-
-
-def addSearchPath(path: str) -> None:
-    """Dumps the provided path to the config.json.
+def storeConfig(configName: str, value: Optional[str]) -> None:
+    """Dumps the provided configName and value within the config.json.
 
     Parameters:
-        path: The path to dump.
+        configName: The key to set in the config.json.
+        value: The value to set in the config.json.
     """
-    with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'config.json'), 'r') as readFile:
-        settings = json.load(readFile)
-
-    with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'config.json'), 'w') as writeFile:
-        settings['__search_path__'] = path
-        json.dump(settings, writeFile, indent=4)
-
-
-def storeConfig(configName, value):
-    with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'utils/config.json'), 'r') as readFile:
+    with open(CONFIG_PATH, 'r') as readFile:
         config = json.load(readFile)
         config[configName] = value
 
-    with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'utils/config.json'), 'w') as writeFile:
+    with open(CONFIG_PATH, 'w') as writeFile:
         json.dump(config, writeFile, indent=4)
 
 
-def getConfig() -> Optional[Mapping[str, Union[str, int]]]:
+def getConfig() -> Union[Mapping[str, Union[str, int]], None]:
+    """Get the config.json.
+
+    Returns:
+        The config.json if is found, else None.
+    """
     try:
-        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'utils/config.json'), 'r') as readFile:
+        with open(CONFIG_PATH, 'r') as readFile:
             return json.load(readFile)
 
     except FileNotFoundError:
         return None
+
+def getConfigByName(configName: str) -> Union[str, None]:
+    """Gets the configuration value from the provided key.
+
+    Parameters:
+        configName: The configuration key.
+
+    Returns:
+        The value of the provided key if it's present, else, None.
+    """
+    with open(CONFIG_PATH, 'r') as readFile:
+        config = json.load(readFile)
+        return config.get(configName, None)
