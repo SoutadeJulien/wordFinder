@@ -1,8 +1,7 @@
-import os
-import json
 import time
 from typing import Callable, Any, TypeVar, Optional
 
+import core
 
 DEV_MODE = False
 
@@ -30,26 +29,16 @@ def timed(function: Callable[..., Any]) -> Callable[..., Any]:
     return wrapper
 
 
-def searchPath() -> Optional[str]:
-    """Gets the __search_path__ value from the config.json.
+def storeConfig(descriptionName: str) -> Callable[..., F]:
+    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+        def wrapper(*args, **kwargs) -> Any:
 
-    Returns:
-        The actual search path.
-    """
-    with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'config.json'), 'r') as readFile:
-        settings = json.load(readFile)
-        return settings.get('__search_path__', None)
+            result = func(*args, **kwargs)
 
+            # Avoid path overwrite if the result is an empty string.
+            if result:
+                core.storeConfig(descriptionName, result)
 
-def addSearchPath(path: str) -> None:
-    """Dumps the provided path to the config.json.
-
-    Parameters:
-        path: The path to dump.
-    """
-    with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'config.json'), 'r') as readFile:
-        settings = json.load(readFile)
-
-    with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'config.json'), 'w') as writeFile:
-        settings['__search_path__'] = path
-        json.dump(settings, writeFile, indent=4)
+            return result
+        return wrapper
+    return decorator

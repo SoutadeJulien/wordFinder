@@ -5,6 +5,8 @@ from PySide2 import QtWidgets
 from PySide2.QtGui import QPalette, QColor
 from PySide2.QtCore import Qt
 
+import core
+
 wordFinderPath = os.path.dirname(os.path.abspath(os.path.dirname(__file__)))
 
 def isPathAppended():
@@ -36,7 +38,15 @@ palette.setColor(QPalette.Link, QColor(42, 130, 218))
 palette.setColor(QPalette.Highlight, QColor(42, 130, 218))
 palette.setColor(QPalette.HighlightedText, Qt.black)
 qApp.setPalette(palette)
+
+
+# Set default configuration if previous configuration is not found.
+if not core.getConfig():
+    print("Configuration not found. Base configuration is applied")
+    core.makeDefaultConfig()
+
 wfUi = wordFinderUi.WordFinder()
+
 
 wfUi.show()
 qApp.exec_()

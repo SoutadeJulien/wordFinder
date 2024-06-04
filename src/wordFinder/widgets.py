@@ -2,6 +2,8 @@ import os
 from PySide2 import QtWidgets, QtCore
 from typing import Optional
 
+import core
+from constants import COLUMN_COUNT
 from wordFinder.utils import wordFinderUtils
 from wordFinder import constants
 
@@ -52,15 +54,17 @@ class ModuleLayoutWindow(QtWidgets.QDialog):
         self.okButton.clicked.connect(self.accept)
         self.cancelButton.clicked.connect(self.reject)
 
-    def getColumnSliderValue(self) -> int:
+    @wordFinderUtils.storeConfig(COLUMN_COUNT)
+    def getColumnSliderValue(self, *args) -> int:
         """Gets the value of the :attr:`columnsSlider` and sets it to the :attr:`columnCount`.
 
         Returns:
             The :attr:`columnsSlider`'s value.
         """
-        value = self.columnsSlider.value()
-        self.columnCount.setText(str(value))
-        return value
+        columnCount = self.columnsSlider.value()
+        self.columnCount.setText(str(columnCount))
+
+        return columnCount
 
 
 class SearchPathWindow(QtWidgets.QDialog):
@@ -92,6 +96,7 @@ class SearchPathWindow(QtWidgets.QDialog):
         self.acceptButton.clicked.connect(self.newPath)
         self.cancelButton.clicked.connect(self.reject)
 
+    @wordFinderUtils.storeConfig(constants.SEARCH_PATH)
     def newPath(self) -> str:
         """Gets if the path wrote in the LineEdit is valid, then, adds the new search path in the config.json.
 
@@ -100,7 +105,6 @@ class SearchPathWindow(QtWidgets.QDialog):
         """
         newPath = self.searchPathLineEdit.text()
         if os.path.isdir(newPath):
-            wordFinderUtils.addSearchPath(newPath)
             self.accept()
 
             # Emit signal to refresh the ui.
@@ -133,12 +137,13 @@ class ModulesWidget(QtWidgets.QWidget):
 
         self.mainLayout = QtWidgets.QGridLayout(self)
 
-        self.addModules(5)
+        self.addModules()
 
-    def addModules(self, columnMax: int) -> None:
+    def addModules(self) -> None:
         """Adds the modules within the :attr:`searchPath` to the main layout."""
         self.clearLayout()
 
+        columnMax = core.getConfig()[COLUMN_COUNT]
         row = 0
         column = 0
 

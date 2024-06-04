@@ -2,9 +2,13 @@ import os
 import logging
 from PySide2 import QtWidgets, QtCore, QtGui
 from typing import Mapping
+import re
 
 import constants
 import widgets
+import core
+
+from constants import DEV_MODE, COLUMN_COUNT
 from utils import wordFinderUtils
 from wordFinder import resources
 
@@ -19,7 +23,7 @@ class WordFinder(QtWidgets.QDialog):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
 
-        self.searchPath = wordFinderUtils.searchPath()
+        self.searchPath = core.searchPath()
 
         self._buildUi()
         self._setupUi()
@@ -27,7 +31,7 @@ class WordFinder(QtWidgets.QDialog):
 
     def _buildUi(self) -> None:
         self.mainLayout = QtWidgets.QVBoxLayout(self)
-        self.devModeLayout = QtWidgets.QHBoxLayout()
+        self.searchModeLayout = QtWidgets.QHBoxLayout()
         self.searchPathLayout = QtWidgets.QHBoxLayout()
         self.checkButtonLayout = QtWidgets.QGridLayout()
         self.optionLayout = QtWidgets.QHBoxLayout()
@@ -37,7 +41,21 @@ class WordFinder(QtWidgets.QDialog):
         self.searchPathLabel = QtWidgets.QLabel()
         self.moduleToCheckLabel = QtWidgets.QLabel("Modules to check")
         self.modulesWidget = widgets.ModulesWidget(self.searchPath)
+
+        self.searchModeGroup = QtWidgets.QGroupBox()
+        self.searchModeGroup.setTitle("Search mode")
+        self.radioSearchModeLayout = QtWidgets.QHBoxLayout(self.searchModeGroup)
+
+        self.literalCheckBox = QtWidgets.QRadioButton("Literal")
+        self.regexCheckBox = QtWidgets.QRadioButton("Regex")
+
+        self.radioSearchModeLayout.addWidget(self.literalCheckBox)
+        self.radioSearchModeLayout.addWidget(self.regexCheckBox)
+
+        self.radioSearchModeLayout.addStretch()
+
         self.showCommentCheckBox = QtWidgets.QCheckBox("Show comments")
+
         self.showContextCheckBox = QtWidgets.QCheckBox("Show context")
         self.contextNumberComboBox = QtWidgets.QComboBox()
         self.checkButton = QtWidgets.QPushButton('check')
@@ -51,7 +69,6 @@ class WordFinder(QtWidgets.QDialog):
 
     def _setupUi(self) -> None:
         self.mainLayout.addWidget(self.menuBar)
-        self.mainLayout.addLayout(self.devModeLayout)
         self.mainLayout.addLayout(self.searchPathLayout)
         self.searchPathLayout.addWidget(self.setSearchPathButton)
         self.searchPathLayout.addWidget(self.searchPathLabel)
@@ -66,17 +83,23 @@ class WordFinder(QtWidgets.QDialog):
         self.mainLayout.addWidget(self.separatorTwo)
         self.mainLayout.addWidget(self.moduleToCheckLabel)
         self.mainLayout.addWidget(self.modulesWidget)
+        self.mainLayout.addWidget(self.searchModeGroup)
+
         self.mainLayout.addWidget(self.wordToSearch)
         self.mainLayout.addWidget(self.output)
         self.mainLayout.addWidget(self.checkButton)
 
-        self.devModeLayout.insertStretch(0)
         self.optionLayout.addStretch()
         self.searchPathLayout.addStretch()
 
         self.uiSetup = self.menuBar.addMenu('Options')
+
         self.devModeAction = self.uiSetup.addAction('Dev mode')
         self.devModeAction.setData(False)
+
+        if core.getConfig()[DEV_MODE]:
+            self.devModeAction.trigger()
+
         self.layoutAction = self.uiSetup.addAction('Layout')
 
         self.showCommentCheckBox.setChecked(True)
@@ -94,6 +117,8 @@ class WordFinder(QtWidgets.QDialog):
             self.contextNumberComboBox.addItem(str(i))
         self.contextNumberComboBox.setCurrentIndex(3)
 
+        self.literalCheckBox.setChecked(True)
+
         # Window.
         self.resize(1300, 800)
         self.setWindowTitle("Word finder")
@@ -108,10 +133,14 @@ class WordFinder(QtWidgets.QDialog):
         self.checkAllButton.clicked.connect(self.checkAllCheckBoxes)
         self.uncheckAllButton.clicked.connect(self.uncheckAllCheckBoxes)
 
-    def _devMode(self) -> None:
+    @wordFinderUtils.storeConfig(DEV_MODE)
+    def _devMode(self) -> bool:
         """This method handle the dev mode.
 
         Basically, the dev mode will activate the @wordFinderUtils.devMode decorator and set to DEBUG the :const:LOGGER logger.
+
+        Returns:
+            The dev mode state.
         """
         wordFinderUtils.DEV_MODE = not self.devModeAction.data()
 
@@ -126,11 +155,13 @@ class WordFinder(QtWidgets.QDialog):
 
         LOGGER.debug("Dev mode: {}".format(wordFinderUtils.DEV_MODE))
 
+        return wordFinderUtils.DEV_MODE
+
     def onLayoutActionTriggered(self) -> None:
         """Opens a window to manage the module's layout."""
         layoutWindow = widgets.ModuleLayoutWindow(self)
         layoutWindow.exec_()
-        self.modulesWidget.addModules(layoutWindow.getColumnSliderValue())
+        self.modulesWidget.addModules()
 
     def setSearchPath(self) -> None:
         """Opens a new window to let the user write the path where to query the modules."""
@@ -150,7 +181,7 @@ class WordFinder(QtWidgets.QDialog):
         self.modulesWidget.searchPath = modulePath
         self.searchPath = modulePath
         self.searchPathLabel.setText("Search path: {}".format(self.searchPath))
-        self.modulesWidget.addModules(5)
+        self.modulesWidget.addModules()
         
     def checkAllCheckBoxes(self) -> None:
         """Checks all checkBoxes"""
@@ -178,7 +209,7 @@ class WordFinder(QtWidgets.QDialog):
                 for lineNumber, line in enumerate(lines, start=1):
                     # Show the comment characters.
                     if self.showCommentCheckBox.isChecked():
-                        if word in line:
+                        if self.wordInLine(word, line):
                             modulesWithPrints.append(module)
 
                             if self.showContextCheckBox.isChecked():
@@ -191,7 +222,7 @@ class WordFinder(QtWidgets.QDialog):
 
                     # Don't show the comment characters.
                     else:
-                        if word in line:
+                        if self.wordInLine(word, line):
                             if self.isLineValid(line):
                                 modulesWithPrints.append(module)
 
@@ -205,6 +236,19 @@ class WordFinder(QtWidgets.QDialog):
 
         if not modulesWithPrints:
             self.output.appendPlainText('The word [{}] is not found'.format(word))
+
+    def wordInLine(self, word, line):
+        if self.literalCheckBox.isChecked():
+            if word in line:
+                return True
+
+        if self.regexCheckBox.isChecked():
+            pattern = r"\b" + re.escape(word) + r"\b"
+
+            if re.search(pattern, line):
+                return True
+
+        return False
 
     @staticmethod
     def isLineValid(line: str) -> bool:
