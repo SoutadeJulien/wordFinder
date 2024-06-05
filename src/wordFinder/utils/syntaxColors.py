@@ -23,8 +23,10 @@ targetedWords = {
 
 # Regex matching.
 regexTargetedWords = [
-    RegexWord(r"(?:[(])(?P<arguments>[\w\[\]: ,*.]*)(?:[)])", 'arguments', "#ffcba1"),
+    RegexWord(r"(?:[(])(?P<arguments>[\w\[\]: ,*.]*)(?:[)])", 'arguments', "#f2a049"),
     RegexWord(r"\b(?P<Union>Union)\b", 'Union', "#fff566"),
+    RegexWord(r"\b(?P<Callable>Callable)\b", 'Callable', "#fff566"),
+    RegexWord(r"\b(?P<Mapping>Mapping)\b", 'Mapping', "#fff566"),
     RegexWord(r"\b(?P<str>str)\b", 'str', "#31aade"),
     RegexWord(r"\b(?P<int>int)\b", 'int', "#31aade"),
     RegexWord(r"\b(?P<float>float)\b", 'float', "#31aade"),

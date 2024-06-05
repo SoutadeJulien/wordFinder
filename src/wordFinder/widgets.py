@@ -14,8 +14,37 @@ class SunkenHSeparator(QtWidgets.QFrame):
     def __init__(self, parent=None) -> None:
         super().__init__(parent=parent)
 
+        self.setLineWidth(1)
         self.setFrameShape(QtWidgets.QFrame.HLine)
-        self.setFrameShadow(QtWidgets.QFrame.Sunken)
+        self.setFrameShadow(QtWidgets.QFrame.Raised)
+        self.setStyleSheet("background-color: #5e5e5c;")
+
+
+class PushButton(QtWidgets.QPushButton):
+
+    STYLESHEET = \
+    """
+    PushButton  {
+        background-color: #525050;
+        color: #ededed;
+        border-style: ridge ;
+        border-color: rgb(93, 93, 93);
+        border-width: 1px;
+        border-radius: 5px;
+    }
+    PushButton:hover {
+        background-color: #707070;
+    }
+    PushButton:pressed {
+        background-color:#828282;
+    }
+    """
+    def __init__(self, text):
+        super().__init__(text)
+        self.setStyleSheet(self.STYLESHEET)
+        
+    def minimumSizeHint(self):
+        return QtCore.QSize(200, 30)
 
 
 class ModuleLayoutWindow(QtWidgets.QDialog):
@@ -34,8 +63,8 @@ class ModuleLayoutWindow(QtWidgets.QDialog):
         self.columnCount = QtWidgets.QLabel()
         self.columnsSlider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
 
-        self.okButton = QtWidgets.QPushButton('Ok')
-        self.cancelButton = QtWidgets.QPushButton('Cancel')
+        self.okButton = QtWidgets.PushButton('Ok')
+        self.cancelButton = QtWidgets.PushButton('Cancel')
 
     def _setupWindow(self) -> None:
         self.mainLayout.addWidget(self.columnsLabel, 0, 0)
@@ -82,8 +111,8 @@ class SearchPathWindow(QtWidgets.QDialog):
         self.buttonLayout = QtWidgets.QHBoxLayout()
 
         self.searchPathLineEdit = QtWidgets.QLineEdit()
-        self.acceptButton = QtWidgets.QPushButton('Ok')
-        self.cancelButton = QtWidgets.QPushButton('Cancel')
+        self.acceptButton = QtWidgets.PushButton('Ok')
+        self.cancelButton = QtWidgets.PushButton('Cancel')
 
         self.mainLayout.addWidget(self.searchPathLineEdit)
         self.mainLayout.addLayout(self.buttonLayout)
@@ -118,11 +147,43 @@ class SearchPathWindow(QtWidgets.QDialog):
 
 class CheckBox(QtWidgets.QCheckBox):
     """A checkbox with a path attribute where to store the module path."""
+
+    STYLESHEET = \
+    """
+    QCheckBox {
+        spacing: 15px;
+        padding: 12px;
+        color: white;
+        border: 0px hidden, black;
+        border-radius: 5
+    }
+    QCheckBox[hover=true] {
+        spacing: 15px;
+        padding: 11px;
+        border: 1px ridge #5e5e5c;
+    }
+    """
+
     def __init__(self, text: str, parent=None):
         super().__init__(text, parent)
 
         self.path = None
 
+        self.setStyleSheet(self.STYLESHEET)
+
+    def enterEvent(self, event):
+        self.setProperty('hover', True)
+        self.style().polish(self)
+        event.accept()
+
+    def leaveEvent(self, event):
+        self.setProperty('hover', False)
+        self.style().polish(self)
+        event.accept()
+
+    def mousePressEvent(self, event):
+        self.setChecked(not self.isChecked())
+        event.accept()
 
 class ModulesWidget(QtWidgets.QWidget):
     """This widget manages the modules to read."""
@@ -140,6 +201,7 @@ class ModulesWidget(QtWidgets.QWidget):
         self.checkedCheckBoxes = []
 
         self.mainLayout = QtWidgets.QGridLayout(self)
+        self.mainLayout.setSpacing(8)
 
         self.addModules()
 

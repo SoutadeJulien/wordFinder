@@ -35,7 +35,7 @@ class WordFinder(QtWidgets.QDialog):
         self.mainLayout = QtWidgets.QVBoxLayout(self)
         self.searchModeLayout = QtWidgets.QHBoxLayout()
         self.searchPathLayout = QtWidgets.QHBoxLayout()
-        self.checkButtonLayout = QtWidgets.QGridLayout()
+        self.checkButtonLayout = QtWidgets.QHBoxLayout()
         self.optionLayout = QtWidgets.QHBoxLayout()
 
         self.menuBar = QtWidgets.QMenuBar()
@@ -72,12 +72,12 @@ class WordFinder(QtWidgets.QDialog):
 
         self.showContextCheckBox = QtWidgets.QCheckBox("Show context")
         self.contextNumberComboBox = QtWidgets.QComboBox()
-        self.checkButton = QtWidgets.QPushButton('check')
+        self.checkButton = widgets.PushButton('check')
         self.wordToSearch = QtWidgets.QLineEdit()
         self.output = QtWidgets.QPlainTextEdit()
-        self.setSearchPathButton = QtWidgets.QPushButton("Change search path")
-        self.checkAllButton = QtWidgets.QPushButton("Check all")
-        self.uncheckAllButton = QtWidgets.QPushButton("Uncheck all")
+        self.setSearchPathButton = widgets.PushButton("Change search path")
+        self.checkAllButton = widgets.PushButton("Check all")
+        self.uncheckAllButton = widgets.PushButton("Uncheck all")
         self.separatorOne = widgets.SunkenHSeparator()
         self.separatorTwo = widgets.SunkenHSeparator()
 
@@ -87,9 +87,6 @@ class WordFinder(QtWidgets.QDialog):
         self.searchPathLayout.addWidget(self.setSearchPathButton)
         self.searchPathLayout.addWidget(self.searchPathLabel)
         self.mainLayout.addWidget(self.separatorOne)
-        self.mainLayout.addLayout(self.checkButtonLayout)
-        self.checkButtonLayout.addWidget(self.checkAllButton, 0, 0)
-        self.checkButtonLayout.addWidget(self.uncheckAllButton, 0, 1)
         self.mainLayout.addLayout(self.optionLayout)
         self.optionLayout.addWidget(self.showCommentCheckBox)
         self.optionLayout.addWidget(self.showContextCheckBox)
@@ -97,11 +94,16 @@ class WordFinder(QtWidgets.QDialog):
         self.mainLayout.addWidget(self.separatorTwo)
         self.mainLayout.addWidget(self.moduleToCheckLabel)
         self.mainLayout.addWidget(self.modulesWidget)
+        self.mainLayout.addLayout(self.checkButtonLayout)
+        self.checkButtonLayout.addWidget(self.checkAllButton)
+        self.checkButtonLayout.addWidget(self.uncheckAllButton)
         self.mainLayout.addWidget(self.searchModeGroup)
 
         self.mainLayout.addWidget(self.wordToSearch)
         self.mainLayout.addWidget(self.output)
         self.mainLayout.addWidget(self.checkButton)
+
+        self.checkButtonLayout.addStretch()
 
         self.searchModeGroup.setTitle("Search mode")
         self.radioSearchModeLayout.addStretch()
@@ -257,7 +259,7 @@ class WordFinder(QtWidgets.QDialog):
                             # Colorize the line dependent on the syntax.
                             colorizedLine = core.colorizeLine(line, word) if self.syntaxAction.isChecked() else line
 
-                            self.output.appendHtml("<font color='green'>{}</font> <span>&#8594;</span> <font color='yellow'>line {}</font> <span>&#8594;</span> {}".format(module, lineNumber, colorizedLine))
+                            self.output.appendHtml("<font color=#5de856>{}</font> <span>&#8594;</span> <font color=#dae63e>line {}</font> <span>&#8594;</span> {}".format(module, lineNumber, colorizedLine))
 
                             if self.showContextCheckBox.isChecked():
                                 self.displayNextLines(modulePath, lineNumber)
@@ -274,7 +276,7 @@ class WordFinder(QtWidgets.QDialog):
                                 # Colorize the line dependent on the syntax.
                                 colorizedLine = core.colorizeLine(line, word) if self.syntaxAction.isChecked() else line
 
-                                self.output.appendHtml("<font color='green'>{}</font> <span>&#8594;</span> <font color='yellow'>line {}</font> <span>&#8594;</span> <font color='white'>{}</font>".format(module, lineNumber, colorizedLine))
+                                self.output.appendHtml("<font color=#5de856>{}</font> <span>&#8594;</span> <font color=#dae63e>line {}</font> <span>&#8594;</span> {}".format(module, lineNumber, colorizedLine))
 
                                 if self.showContextCheckBox.isChecked():
                                     self.displayNextLines(modulePath, lineNumber)
