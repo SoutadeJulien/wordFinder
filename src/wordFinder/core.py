@@ -1,8 +1,10 @@
 import os
 import json
 from typing import Optional, Mapping, Union
+import re
 
 import constants
+from utils import syntaxColors
 
 
 CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'utils/config.json')
@@ -42,7 +44,8 @@ def getConfig() -> Union[Mapping[str, Union[str, int]], None]:
     except FileNotFoundError:
         return None
 
-def getConfigByName(configName: str) -> Union[str, None]:
+
+def getConfigValueByName(configName: str) -> Union[str, None]:
     """Gets the configuration value from the provided key.
 
     Parameters:
@@ -54,3 +57,31 @@ def getConfigByName(configName: str) -> Union[str, None]:
     with open(CONFIG_PATH, 'r') as readFile:
         config = json.load(readFile)
         return config.get(configName, None)
+
+
+def colorizeLine(line: str, wordToSearch: str) -> str:
+    """Colorizes the provided line depending on the targets words from the syntaxColors module.
+
+    Parameters:
+        line: The line where to search the word.
+        wordToSearch: the word to search in the :param:`line`.
+
+    Returns:
+        A colored line in HTML format.
+    """
+    coloredLine = line
+
+    for word in syntaxColors.regexTargetedWords:
+        matches = re.search(word.regex, coloredLine)
+
+        if matches:
+            coloredLine = coloredLine.replace(matches.group(word.matchingGroup), f"<font color={word.color}>{matches.group(word.matchingGroup)}</font>")
+
+    for word, color in syntaxColors.targetedWords.items():
+        if word in line:
+            coloredLine = coloredLine.replace(word, f"<font color={color}>{word}</font>")
+
+    if wordToSearch in coloredLine:
+        coloredLine = coloredLine.replace(wordToSearch, f"""<font color={"#5ffa16"}>{wordToSearch}</font>""")
+
+    return coloredLine

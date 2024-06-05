@@ -1,5 +1,5 @@
 import time
-from typing import Callable, Any, TypeVar, Optional
+from typing import Callable, Any, TypeVar
 
 import core
 
@@ -9,6 +9,13 @@ DEV_MODE = False
 F = TypeVar('F', bound=Callable[..., Any])
 
 def devMode(dec: Callable[[Callable[..., Any]], F]) -> Callable[..., F]:
+    """This is a decorator with a condition that is determines if the decorator is activated.
+
+    dec: The decorator.
+
+    Returns:
+        The function if :const:`DEV_MODE` is False, else, the decorator.
+    """
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         def wrapper(*args, **kwargs) -> Any:
             if not DEV_MODE:
@@ -19,6 +26,7 @@ def devMode(dec: Callable[[Callable[..., Any]], F]) -> Callable[..., F]:
 
 
 def timed(function: Callable[..., Any]) -> Callable[..., Any]:
+    """A decorator to time the execution of a function """
     def wrapper(*args, **kwargs) -> Any:
         start = time.time()
         result = function(*args, **kwargs)
@@ -29,7 +37,14 @@ def timed(function: Callable[..., Any]) -> Callable[..., Any]:
     return wrapper
 
 
-def storeConfig(descriptionName: str) -> Callable[..., F]:
+def storeConfig(configurationKey: str) -> Callable[..., F]:
+    """This decorator will store the provided :param:`descriptionName` in the config.json.
+
+    configurationKey: The key to store in the config.json.
+
+    Notes:
+        The value of the :param:`configurationKey` is the return value of the decorated function.
+    """
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         def wrapper(*args, **kwargs) -> Any:
 
@@ -37,7 +52,7 @@ def storeConfig(descriptionName: str) -> Callable[..., F]:
 
             # Avoid path overwrite if the result is an empty string.
             if result != '':
-                core.storeConfig(descriptionName, result)
+                core.storeConfig(configurationKey, result)
 
             return result
         return wrapper

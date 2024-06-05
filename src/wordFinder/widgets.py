@@ -1,6 +1,6 @@
 import os
 from PySide2 import QtWidgets, QtCore
-from typing import Optional, List
+from typing import Optional, List, Tuple
 
 import core
 from constants import COLUMN_COUNT
@@ -147,7 +147,7 @@ class ModulesWidget(QtWidgets.QWidget):
         """Adds the modules within the :attr:`searchPath` to the main layout."""
         self.clearLayout()
 
-        columnMax = core.getConfigByName(COLUMN_COUNT)
+        columnMax = core.getConfigValueByName(COLUMN_COUNT)
         row = 0
         column = 0
 
@@ -180,7 +180,7 @@ class ModulesWidget(QtWidgets.QWidget):
         Returns:
             True if the checkBox is present in the config file, else False.
         """
-        checkedBoxes = core.getConfigByName(constants.CHECKED_MODULES)
+        checkedBoxes = core.getConfigValueByName(constants.CHECKED_MODULES)
 
         if not checkedBoxes:
             return False

@@ -25,7 +25,7 @@ class WordFinder(QtWidgets.QDialog):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
 
-        self.searchPath = core.getConfigByName(constants.SEARCH_PATH)
+        self.searchPath = core.getConfigValueByName(constants.SEARCH_PATH)
 
         self._buildUi()
         self._setupUi()
@@ -39,6 +39,20 @@ class WordFinder(QtWidgets.QDialog):
         self.optionLayout = QtWidgets.QHBoxLayout()
 
         self.menuBar = QtWidgets.QMenuBar()
+
+        self.uiSetup = self.menuBar.addMenu('Options')
+
+        self.devModeAction = self.uiSetup.addAction('Dev mode')
+        self.devModeAction.setCheckable(True)
+
+        if core.getConfigValueByName(constants.DEV_MODE):
+            self.devModeAction.setChecked(True)
+
+        self.layoutAction = self.uiSetup.addAction('Layout')
+
+        self.syntaxAction = self.uiSetup.addAction('Syntax highlighting')
+        self.syntaxAction.setCheckable(True)
+        self.syntaxAction.setChecked(True)
 
         self.searchPathLabel = QtWidgets.QLabel()
         self.moduleToCheckLabel = QtWidgets.QLabel("Modules to check")
@@ -54,6 +68,7 @@ class WordFinder(QtWidgets.QDialog):
         self.radioSearchModeLayout.addWidget(self.regexCheckBox)
 
         self.showCommentCheckBox = QtWidgets.QCheckBox("Show comments")
+        self.showCommentCheckBox.setChecked(True)
 
         self.showContextCheckBox = QtWidgets.QCheckBox("Show context")
         self.contextNumberComboBox = QtWidgets.QComboBox()
@@ -94,21 +109,18 @@ class WordFinder(QtWidgets.QDialog):
         self.optionLayout.addStretch()
         self.searchPathLayout.addStretch()
 
-        self.uiSetup = self.menuBar.addMenu('Options')
-
-        self.devModeAction = self.uiSetup.addAction('Dev mode')
-        self.devModeAction.setData(False)
-
-        if core.getConfigByName(constants.DEV_MODE):
-            self.devModeAction.trigger()
-
-        self.layoutAction = self.uiSetup.addAction('Layout')
-
-        self.showCommentCheckBox.setChecked(True)
         self.searchPathLabel.setText("Search path: {}".format(self.searchPath))
-        self.moduleToCheckLabel.setAlignment(QtCore.Qt.AlignCenter)
+
+        self.checkAllButton.setFocusPolicy(QtCore.Qt.NoFocus)
+        self.uncheckAllButton.setFocusPolicy(QtCore.Qt.NoFocus)
+
+        self.setSearchPathButton.setFocusPolicy(QtCore.Qt.NoFocus)
         self.setSearchPathButton.setFixedWidth(100)
+
+        self.moduleToCheckLabel.setAlignment(QtCore.Qt.AlignCenter)
+
         self.wordToSearch.setPlaceholderText('Search')
+
         self.output.setFont(QtGui.QFont('Arial', 13))
         self.output.setReadOnly(True)
 
@@ -122,6 +134,7 @@ class WordFinder(QtWidgets.QDialog):
         self.literalCheckBox.setChecked(True)
 
         # Main window.
+        self.mainLayout.setMargin(5)
         self.resize(1300, 800)
         self.setWindowTitle("Word finder")
         self.setWindowIcon(QtGui.QIcon("wfIcons:w.png"))
@@ -131,6 +144,7 @@ class WordFinder(QtWidgets.QDialog):
         self.closed.connect(self.saveCheckedModules)
         self.devModeAction.triggered.connect(self._devMode)
         self.layoutAction.triggered.connect(self.onLayoutActionTriggered)
+        self.syntaxAction.triggered.connect(self.onSyntaxActionTriggered)
         self.setSearchPathButton.clicked.connect(self.setSearchPath)
         self.checkButton.clicked.connect(self.searchWord)
         self.checkAllButton.clicked.connect(self.checkAllCheckBoxes)
@@ -154,7 +168,7 @@ class WordFinder(QtWidgets.QDialog):
         Returns:
             The dev mode state.
         """
-        wordFinderUtils.DEV_MODE = not self.devModeAction.data()
+        wordFinderUtils.DEV_MODE = self.devModeAction.isChecked()
 
         if wordFinderUtils.DEV_MODE:
             self.devModeAction.setIcon(QtGui.QIcon("wfIcons:check.png"))
@@ -164,11 +178,11 @@ class WordFinder(QtWidgets.QDialog):
             self.devModeAction.setIcon(QtGui.QIcon(""))
             LOGGER.setLevel(20)
 
-        self.devModeAction.setData(wordFinderUtils.DEV_MODE)
+        self.devModeAction.setChecked(wordFinderUtils.DEV_MODE)
 
         LOGGER.debug("Dev mode: {}".format(wordFinderUtils.DEV_MODE))
 
-        return wordFinderUtils.DEV_MODE
+        return self.devModeAction.isChecked()
 
     def onLayoutActionTriggered(self) -> None:
         """Opens a window to manage the module's layout."""
@@ -177,6 +191,14 @@ class WordFinder(QtWidgets.QDialog):
 
         # Set the modules with the new layout configuration.
         self.modulesWidget.addModules()
+
+    def onSyntaxActionTriggered(self) -> None:
+        """Sets the syntax action icon"""
+        if self.syntaxAction.isChecked():
+            self.syntaxAction.setIcon(QtGui.QIcon("wfIcons:check.png"))
+            return
+
+        self.syntaxAction.setIcon(QtGui.QIcon(""))
 
     def setSearchPath(self) -> None:
         """Opens a new window to let the user write the path where to query the modules."""
@@ -232,7 +254,10 @@ class WordFinder(QtWidgets.QDialog):
                             if self.showContextCheckBox.isChecked():
                                 self.displayPreviousLines(modulePath, lineNumber)
 
-                            self.output.appendHtml("<font color='green'>{}</font> <span>&#8594;</span> <font color='yellow'>line {}</font> <span>&#8594;</span> <font color='white'>{}</font>".format(module, lineNumber, line))
+                            # Colorize the line dependent on the syntax.
+                            colorizedLine = core.colorizeLine(line, word) if self.syntaxAction.isChecked() else line
+
+                            self.output.appendHtml("<font color='green'>{}</font> <span>&#8594;</span> <font color='yellow'>line {}</font> <span>&#8594;</span> {}".format(module, lineNumber, colorizedLine))
 
                             if self.showContextCheckBox.isChecked():
                                 self.displayNextLines(modulePath, lineNumber)
@@ -246,7 +271,10 @@ class WordFinder(QtWidgets.QDialog):
                                 if self.showContextCheckBox.isChecked():
                                     self.displayPreviousLines(modulePath, lineNumber)
 
-                                self.output.appendHtml("<font color='green'>{}</font> <span>&#8594;</span> <font color='yellow'>line {}</font> <span>&#8594;</span> <font color='white'>{}</font>".format(module, lineNumber, line))
+                                # Colorize the line dependent on the syntax.
+                                colorizedLine = core.colorizeLine(line, word) if self.syntaxAction.isChecked() else line
+
+                                self.output.appendHtml("<font color='green'>{}</font> <span>&#8594;</span> <font color='yellow'>line {}</font> <span>&#8594;</span> <font color='white'>{}</font>".format(module, lineNumber, colorizedLine))
 
                                 if self.showContextCheckBox.isChecked():
                                     self.displayNextLines(modulePath, lineNumber)
