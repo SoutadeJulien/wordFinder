@@ -1,6 +1,6 @@
 import os
 from PySide2 import QtWidgets, QtCore
-from typing import Optional, List, Tuple
+from typing import Optional, List
 
 import core
 from constants import COLUMN_COUNT
@@ -44,7 +44,7 @@ class PushButton(QtWidgets.QPushButton):
         self.setStyleSheet(self.STYLESHEET)
         
     def minimumSizeHint(self):
-        return QtCore.QSize(200, 30)
+        return QtCore.QSize(200, 25)
 
 
 class ModuleLayoutWindow(QtWidgets.QDialog):
@@ -63,8 +63,8 @@ class ModuleLayoutWindow(QtWidgets.QDialog):
         self.columnCount = QtWidgets.QLabel()
         self.columnsSlider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
 
-        self.okButton = QtWidgets.PushButton('Ok')
-        self.cancelButton = QtWidgets.PushButton('Cancel')
+        self.okButton = PushButton('Ok')
+        self.cancelButton = PushButton('Cancel')
 
     def _setupWindow(self) -> None:
         self.mainLayout.addWidget(self.columnsLabel, 0, 0)
@@ -111,8 +111,8 @@ class SearchPathWindow(QtWidgets.QDialog):
         self.buttonLayout = QtWidgets.QHBoxLayout()
 
         self.searchPathLineEdit = QtWidgets.QLineEdit()
-        self.acceptButton = QtWidgets.PushButton('Ok')
-        self.cancelButton = QtWidgets.PushButton('Cancel')
+        self.acceptButton = PushButton('Ok')
+        self.cancelButton = PushButton('Cancel')
 
         self.mainLayout.addWidget(self.searchPathLineEdit)
         self.mainLayout.addLayout(self.buttonLayout)
@@ -151,6 +151,7 @@ class CheckBox(QtWidgets.QCheckBox):
     STYLESHEET = \
     """
     QCheckBox {
+        background-color: #454545;
         spacing: 15px;
         padding: 12px;
         color: white;
@@ -184,6 +185,7 @@ class CheckBox(QtWidgets.QCheckBox):
     def mousePressEvent(self, event):
         self.setChecked(not self.isChecked())
         event.accept()
+
 
 class ModulesWidget(QtWidgets.QWidget):
     """This widget manages the modules to read."""
