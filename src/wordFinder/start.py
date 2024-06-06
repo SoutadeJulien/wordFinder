@@ -50,3 +50,6 @@ wfUi = wordFinderUi.WordFinder()
 
 wfUi.show()
 qApp.exec_()
+
+def testing():
+    pass

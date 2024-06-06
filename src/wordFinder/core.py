@@ -75,7 +75,8 @@ def colorizeLine(line: str, wordToSearch: str) -> str:
         matches = re.search(word.regex, coloredLine)
 
         if matches:
-            coloredLine = coloredLine.replace(matches.group(word.matchingGroup), f"<font color={word.color}>{matches.group(word.matchingGroup)}</font>")
+            if matches.group(word.matchingGroup) != '':
+                coloredLine = coloredLine.replace(matches.group(word.matchingGroup), f"<font color={word.color}>{matches.group(word.matchingGroup)}</font>")
 
     for word, color in syntaxColors.targetedWords.items():
         if word in line:
