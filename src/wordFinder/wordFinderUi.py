@@ -10,6 +10,7 @@ import core
 
 from utils import wordFinderUtils
 from wordFinder import resources
+from wordFinder.gitHub import auth
 
 
 LOGGER = logging.getLogger(__name__)
@@ -31,6 +32,11 @@ class WordFinder(QtWidgets.QDialog):
         self._setupUi()
         self._connectUi()
 
+        # Add modules.
+        self.stackedModulesWidget.setModulesWidgetSearchPath(self.searchPath)
+        self.stackedModulesWidget.addLocalModules()
+        self.stackedModulesWidget.addGitHubModules()
+
     def _buildUi(self) -> None:
         self.mainLayout = QtWidgets.QVBoxLayout(self)
         self.searchModeLayout = QtWidgets.QHBoxLayout()
@@ -41,7 +47,9 @@ class WordFinder(QtWidgets.QDialog):
         self.menuBar = QtWidgets.QMenuBar()
 
         self.uiSetup = self.menuBar.addMenu('Options')
+        self.githubSetup = self.menuBar.addMenu('Github')
 
+        # Ui setup.
         self.devModeAction = self.uiSetup.addAction('Dev mode')
         self.devModeAction.setCheckable(True)
 
@@ -54,9 +62,12 @@ class WordFinder(QtWidgets.QDialog):
         self.syntaxAction.setCheckable(True)
         self.syntaxAction.setChecked(True)
 
+        # Github setup.
+        self.githubTokenAction = self.githubSetup.addAction("Set Github personal access tokens ")
+
         self.searchPathLabel = QtWidgets.QLabel()
         self.moduleToCheckLabel = QtWidgets.QLabel("Modules to check")
-        self.modulesWidget = widgets.ModulesWidget(self.searchPath)
+        self.stackedModulesWidget = widgets.StackModulesWidget(self.searchPath)
 
         self.searchModeGroup = QtWidgets.QGroupBox()
         self.radioSearchModeLayout = QtWidgets.QHBoxLayout(self.searchModeGroup)
@@ -74,8 +85,8 @@ class WordFinder(QtWidgets.QDialog):
         self.contextNumberComboBox = QtWidgets.QComboBox()
         self.checkButton = widgets.PushButton('check')
         self.wordToSearch = QtWidgets.QLineEdit()
-        self.output = QtWidgets.QPlainTextEdit()
-        self.setSearchPathButton = widgets.PushButton("Change search path")
+        self.output = widgets.OutputWidget()
+        self.setSearchPathButton = widgets.PushButton("Set local search path")
         self.checkAllButton = widgets.PushButton("Check all")
         self.uncheckAllButton = widgets.PushButton("Uncheck all")
         self.separatorOne = widgets.SunkenHSeparator()
@@ -93,7 +104,7 @@ class WordFinder(QtWidgets.QDialog):
         self.optionLayout.addWidget(self.contextNumberComboBox)
         self.mainLayout.addWidget(self.separatorTwo)
         self.mainLayout.addWidget(self.moduleToCheckLabel)
-        self.mainLayout.addWidget(self.modulesWidget)
+        self.mainLayout.addWidget(self.stackedModulesWidget)
         self.mainLayout.addLayout(self.checkButtonLayout)
         self.checkButtonLayout.addWidget(self.checkAllButton)
         self.checkButtonLayout.addWidget(self.uncheckAllButton)
@@ -143,10 +154,12 @@ class WordFinder(QtWidgets.QDialog):
         self.setWindowFlag(QtCore.Qt.WindowMinimizeButtonHint, True)
 
     def _connectUi(self) -> None:
-        self.closed.connect(self.saveCheckedModules)
+        self.closed.connect(self.saveLocalCheckedModules)
+        self.closed.connect(self.saveGitHubCheckedModules)
         self.devModeAction.triggered.connect(self._devMode)
         self.layoutAction.triggered.connect(self.onLayoutActionTriggered)
         self.syntaxAction.triggered.connect(self.onSyntaxActionTriggered)
+        self.githubTokenAction.triggered.connect(self.onGithubTokenActionTriggered)
         self.setSearchPathButton.clicked.connect(self.setSearchPath)
         self.checkButton.clicked.connect(self.searchWord)
         self.checkAllButton.clicked.connect(self.checkAllCheckBoxes)
@@ -156,10 +169,15 @@ class WordFinder(QtWidgets.QDialog):
         event.accept()
         self.closed.emit()
 
-    @wordFinderUtils.storeConfig(constants.CHECKED_MODULES)
-    def saveCheckedModules(self) -> List[str]:
+    @wordFinderUtils.storeConfig(constants.LOCAL_CHECKED_MODULES)
+    def saveLocalCheckedModules(self) -> List[str]:
         """Gets the checked checkBoxes and save them within the config file."""
-        return [checkBox.text() for checkBox in self.modulesWidget.allCheckBoxes if checkBox.isChecked()]
+        return [checkBox.text() for checkBox in self.stackedModulesWidget.allLocalCheckBoxes if checkBox.isChecked()]
+
+    @wordFinderUtils.storeConfig(constants.GIT_HUB_CHECKED_MODULES)
+    def saveGitHubCheckedModules(self) -> List[str]:
+        """Gets the checked checkBoxes and save them within the config file."""
+        return [checkBox.text() for checkBox in self.stackedModulesWidget.allGitHubCheckBoxes if checkBox.isChecked()]
 
     @wordFinderUtils.storeConfig(constants.DEV_MODE)
     def _devMode(self) -> bool:
@@ -192,7 +210,7 @@ class WordFinder(QtWidgets.QDialog):
         layoutWindow.exec_()
 
         # Set the modules with the new layout configuration.
-        self.modulesWidget.addModules()
+        self.stackedModulesWidget.addLocalModules()
 
     def onSyntaxActionTriggered(self) -> None:
         """Sets the syntax action icon"""
@@ -202,42 +220,54 @@ class WordFinder(QtWidgets.QDialog):
 
         self.syntaxAction.setIcon(QtGui.QIcon(""))
 
+    @wordFinderUtils.storeConfig(constants.GIT_HUB_HEY)
+    def onGithubTokenActionTriggered(self):
+        githubWindow = widgets.GitHubWindow()
+        githubWindow.exec_()
+
+        self.refreshModules()
+
+        return githubWindow.gitHubToken()
+
     def setSearchPath(self) -> None:
         """Opens a new window to let the user write the path where to query the modules."""
         pathWindow = widgets.SearchPathWindow()
-        pathWindow.searchPathAdded.connect(self.refreshModules)
         pathWindow.exec_()
 
         # Set the new search path.
         self.searchPath = pathWindow.newPath()
+        self.refreshModules()
 
         LOGGER.debug("Search path: {}".format(self.searchPath))
 
-    def refreshModules(self, modulePath: str) -> None:
-        """Reset the module path in the module widget and this class, adds the new module's checkBoxes to this window.
-
-        Parameters:
-            modulePath: The new module path where to get the modules.
-        """
-        self.modulesWidget.searchPath = modulePath
-        self.searchPath = modulePath
+    def refreshModules(self) -> None:
+        """Reset the module path in the module widget and this class, adds the new module's checkBoxes to this window."""
         self.searchPathLabel.setText("Search path: {}".format(self.searchPath))
-        self.modulesWidget.addModules()
+        self.stackedModulesWidget.setModulesWidgetSearchPath(self.searchPath)
+        self.stackedModulesWidget.addLocalModules()
+        self.stackedModulesWidget.addGitHubModules()
         
     def checkAllCheckBoxes(self) -> None:
         """Checks all checkBoxes"""
-        LOGGER.debug("All checkboxes from module widget: {}".format(self.modulesWidget.allCheckBoxes))
+        LOGGER.debug("All checkboxes from module widget: {}".format(self.stackedModulesWidget.allCheckBoxes))
 
-        for checkBox in self.modulesWidget.allCheckBoxes:
+        for checkBox in self.stackedModulesWidget.allCheckBoxes:
             checkBox.setChecked(True)
 
     def uncheckAllCheckBoxes(self) -> None:
         """Unchecks all checkBoxes"""
-        for checkBox in self.modulesWidget.allCheckBoxes:
+        for checkBox in self.stackedModulesWidget.allCheckBoxes:
             checkBox.setChecked(False)
 
-    @wordFinderUtils.devMode(wordFinderUtils.timed)
     def searchWord(self) -> None:
+        if not self.stackedModulesWidget.currentIndex():
+            self.searchWordInLocal()
+            return
+
+        self.searchWordInGitHub()
+
+    @wordFinderUtils.devMode(wordFinderUtils.timed)
+    def searchWordInLocal(self) -> None:
         """Search the typed word or sentence in the checked modules."""
         self.output.clear()
 
@@ -259,7 +289,7 @@ class WordFinder(QtWidgets.QDialog):
                             # Colorize the line dependent on the syntax.
                             colorizedLine = core.colorizeLine(line, word) if self.syntaxAction.isChecked() else line
 
-                            self.output.appendHtml("<font color=#5de856>{}</font> <span>&#8594;</span> <font color=#dae63e>line {}</font> <span>&#8594;</span> {}".format(module, lineNumber, colorizedLine))
+                            self.output.appendHtml("<font color=#5de856>{}</font> <span>&#8594;</span> <font color=#dae63e>line {}</font> <span>&#8594;</span> {}".format(' <span>&#8594;</span> '.join(modulePath.split(os.sep)[-3:]), lineNumber, colorizedLine))
 
                             if self.showContextCheckBox.isChecked():
                                 self.displayNextLines(modulePath, lineNumber)
@@ -276,13 +306,19 @@ class WordFinder(QtWidgets.QDialog):
                                 # Colorize the line dependent on the syntax.
                                 colorizedLine = core.colorizeLine(line, word) if self.syntaxAction.isChecked() else line
 
-                                self.output.appendHtml("<font color=#5de856>{}</font> <span>&#8594;</span> <font color=#dae63e>line {}</font> <span>&#8594;</span> {}".format(module, lineNumber, colorizedLine))
+                                self.output.appendHtml("<font color=#5de856>{}</font> <span>&#8594;</span> <font color=#dae63e>line {}</font> <span>&#8594;</span> {}".format(' <span>&#8594;</span> '.join(modulePath.split(os.sep)[-3:]), lineNumber, colorizedLine))
 
                                 if self.showContextCheckBox.isChecked():
                                     self.displayNextLines(modulePath, lineNumber)
 
         if not modulesWithPrints:
             self.output.appendPlainText('The word [{}] is not found'.format(word))
+
+
+    def searchWordInGitHub(self):
+        for checkBox in self.stackedModulesWidget.allGitHubCheckBoxes:
+            if not checkBox.isChecked():
+                continue
 
     def wordInLine(self, word: str, line: str) -> bool:
         """Gets if the provided line contains the provided word.
@@ -334,7 +370,7 @@ class WordFinder(QtWidgets.QDialog):
         """
         allModules = {}
 
-        for checkBox in self.modulesWidget.allCheckBoxes:
+        for checkBox in self.stackedModulesWidget.allLocalCheckBoxes:
             if not checkBox.isChecked():
                 continue
 
@@ -367,7 +403,7 @@ class WordFinder(QtWidgets.QDialog):
 
             for number, line in enumerate(lines, start=1):
                 if number == lineNumber - index:
-                    self.output.appendHtml("<font color='grey'>{}</font> <span>&#8594;</span> <font color='grey'>line {}</font> <span>&#8594;</span> <font color='grey'>{}</font>".format(modulePath.split('\\')[-1], number, line))
+                    self.output.appendHtml("<font color='grey'>{}</font> <span>&#8594;</span> <font color='grey'>line {}</font> <span>&#8594;</span> <font color' -> ''>{}</font>".format(" <span>&#8594;</span> ".join(modulePath.split(os.sep)[-3:]), number, line))
                     index -= 1
 
                     if index == 0:
@@ -386,7 +422,7 @@ class WordFinder(QtWidgets.QDialog):
 
             for number, line in enumerate(lines, start=1):
                 if number == lineNumber + index:
-                    self.output.appendHtml("<font color='grey'>{}</font> <span>&#8594;</span> <font color='grey'>line {}</font> <span>&#8594;</span> <font color='grey'>{}</font>".format(modulePath.split('\\')[-1], number, line))
+                    self.output.appendHtml("<font color='grey'>{}</font> <span>&#8594;</span> <font color='grey'>line {}</font> <span>&#8594;</span> <font color' -> ''>{}</font>".format(" <span>&#8594;</span> ".join(modulePath.split(os.sep)[-3:]), number, line))
                     index += 1
 
                     if index == int(self.contextNumberComboBox.currentText()) + 1:
