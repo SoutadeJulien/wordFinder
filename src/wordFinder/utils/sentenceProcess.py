@@ -1,7 +1,6 @@
+import re
+
 from wordFinder import constants
-
-
-
 
 
 def isLineValid(line: str) -> bool:
@@ -19,3 +18,28 @@ def isLineValid(line: str) -> bool:
         if char in line:
             return False
     return True
+
+
+def wordInLine(word: str, line: str, isLitteral) -> bool:
+        """Gets if the provided line contains the provided word.
+
+        There is two way to search the word, with a simple check or with a regex.
+
+        Parameters:
+            word: The word to search.
+            line: The line that is used to search for the word.
+
+        Returns:
+            True if the line contains the word, else False.
+        """
+        if isLitteral:
+            if word in line:
+                return True
+
+        else:
+            pattern = r"\b" + re.escape(word) + r"\b"
+
+            if re.search(pattern, line):
+                return True
+
+        return False

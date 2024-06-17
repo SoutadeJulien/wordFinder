@@ -1,8 +1,8 @@
 MODULES_PATH = r'C:\Users\tomtom\Documents\travail_dev\local_lhorda_tools'
 
-EXCLUDED_DIRECTORIES = ('__pycache__', '.idea', '.git')
+EXCLUDED_DIRECTORIES = ('__pycache__', '.idea', '.git', 'docs', '.gitignore')
 
-EXCLUDED_MODULES = ('.idea', )
+EXCLUDED_MODULES = ('__init__.py',)
 
 EXCLUDED_CHARACTERS = (r"""/""", r"#",)
 

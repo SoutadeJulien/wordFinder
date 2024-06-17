@@ -1,13 +1,21 @@
 import os
-from PySide2 import QtWidgets, QtCore
-from typing import Optional, List
+import logging
+from typing import Optional, List, Mapping, Iterable, Any
+
+from PySide2 import QtCore, QtWidgets, QtGui
 
 import core
+from wordFinder.widgets import checkBoxes
 from constants import COLUMN_COUNT
 from wordFinder.utils import wordFinderUtils
+from wordFinder.utils import sentenceProcess
 from wordFinder import constants
 
 from wordFinder.gitHub import auth
+
+
+LOGGER = logging.getLogger(__name__)
+LOGGER.setLevel(20)
 
 
 class SunkenHSeparator(QtWidgets.QFrame):
@@ -50,8 +58,15 @@ class PushButton(QtWidgets.QPushButton):
 
 
 class OutputWidget(QtWidgets.QPlainTextEdit):
+
+    STYLESHEET = \
+        """
+        background-color: rgb(60, 60, 60);
+        """
+
     def __init__(self):
         super().__init__()
+        self.setStyleSheet(self.STYLESHEET)
 
     def minimumSizeHint(self):
         return QtCore.QSize(300, 350)
@@ -185,52 +200,7 @@ class GitHubWindow(QtWidgets.QDialog):
         return token
 
 
-class CheckBox(QtWidgets.QCheckBox):
-    """A checkbox with a path attribute where to store the module path."""
-
-    STYLESHEET = \
-    """
-    QCheckBox {
-        background-color: #565656;
-        spacing: 10px;
-        padding: 8px;
-        color: white;
-        border: 0px hidden, black;
-        border-radius: 5
-    }
-    QCheckBox[hover=true] {
-        spacing: 10px;
-        padding: 7px;
-        border: 1px ridge #5e5e5c;
-    }
-    """
-
-    def __init__(self, text: str, parent=None):
-        super().__init__(text, parent)
-
-        self.path = None
-
-        self.setStyleSheet(self.STYLESHEET)
-
-    def enterEvent(self, event):
-        self.setProperty('hover', True)
-        self.style().polish(self)
-        event.accept()
-
-    def leaveEvent(self, event):
-        self.setProperty('hover', False)
-        self.style().polish(self)
-        event.accept()
-
-    def mousePressEvent(self, event):
-        self.setChecked(not self.isChecked())
-        event.accept()
-
-    def minimumSizeHint(self):
-        return QtCore.QSize(100, 25)
-
-
-class LocalModuleWidget(QtWidgets.QWidget):
+class AbstractModuleWidget(QtWidgets.QWidget):
 
     STYLESHEET = \
     """
@@ -248,8 +218,44 @@ class LocalModuleWidget(QtWidgets.QWidget):
         self.allCheckBoxes = []
         self.checkedCheckBoxes = []
 
-        self.mainLayout = QtWidgets.QGridLayout(self)
+        self._buildUi()
+        self._setupUi()
+        self._connectUi()
+
         self.setStyleSheet(self.STYLESHEET)
+
+    def _buildUi(self):
+        self.mainLayout = QtWidgets.QVBoxLayout(self)
+        self.moduleLayout = QtWidgets.QGridLayout()
+
+        self.checkAllLayout = QtWidgets.QHBoxLayout()
+        self.modulesWidgets = QtWidgets.QWidget()
+
+        self.output = OutputWidget()
+
+        self.checkAllButton = PushButton("Check all")
+        self.uncheckAllButton = PushButton("Uncheck all")
+
+    def _setupUi(self):
+        self.mainLayout.addLayout(self.moduleLayout)
+        self.moduleLayout.addWidget(self.modulesWidgets)
+
+        self.mainLayout.addLayout(self.checkAllLayout)
+        self.checkAllLayout.addWidget(self.checkAllButton)
+        self.checkAllLayout.addWidget(self.uncheckAllButton)
+
+        self.mainLayout.addWidget(self.output)
+
+        self.checkAllLayout.addStretch()
+
+        self.checkAllButton.setFocusPolicy(QtCore.Qt.NoFocus)
+        self.uncheckAllButton.setFocusPolicy(QtCore.Qt.NoFocus)
+        self.output.setFont(QtGui.QFont('Arial', 13))
+        self.output.setReadOnly(True)
+
+    def _connectUi(self):
+        self.checkAllButton.clicked.connect(self.checkAllCheckBoxes)
+        self.uncheckAllButton.clicked.connect(self.unCheckAllCheckBoxes)
 
     @property
     def searchPath(self):
@@ -269,20 +275,48 @@ class LocalModuleWidget(QtWidgets.QWidget):
             return
 
         for module in self.modules():
-            checkBox = CheckBox(module)
-            checkBox.path = os.path.join(self._searchPath, module)
+            checkBox = checkBoxes.CheckBox(module, os.path.join(self.searchPath, module))
 
             # Check the checkBox if it's previously checked.
             if self.isCheckBoxPreviouslyChecked(checkBox):
                 checkBox.setChecked(True)
 
-            self.mainLayout.addWidget(checkBox, row, column)
+            self.moduleLayout.addWidget(checkBox, row, column)
             self.allCheckBoxes.append(checkBox)
 
             column += 1
             if column == columnMax:
                 column = 0
                 row += 1
+
+    def clearLayout(self) -> None:
+        """Clears the main layout."""
+        self.allCheckBoxes.clear()
+
+        if self.moduleLayout.count():
+            for index in range(self.moduleLayout.count()):
+                item = self.moduleLayout.itemAt(index)
+                if item is not None:
+                    item.widget().deleteLater()
+
+    @property
+    def filteredModules(self) -> Iterable[Any]:
+        """Filters the checked checkBoxes.
+
+        Returns:
+            A dictionary containing each checked module's names as key and they path as value.
+        """
+        allModules = []
+
+        for checkBox in self.allCheckBoxes:
+            if not checkBox.isChecked():
+                continue
+
+            allModules.append(checkBox)
+
+        return allModules
+
+class LocalModuleWidget(AbstractModuleWidget):
 
     @staticmethod
     def isCheckBoxPreviouslyChecked(checkBox: QtWidgets.QCheckBox) -> bool:
@@ -302,15 +336,6 @@ class LocalModuleWidget(QtWidgets.QWidget):
         if checkBox.text() in checkedBoxes:
             return True
 
-    def clearLayout(self) -> None:
-        """Clears the main layout."""
-        self.allCheckBoxes.clear()
-        if self.mainLayout.count():
-            for index in range(self.mainLayout.count()):
-                item = self.mainLayout.itemAt(index)
-                if item:
-                    item.widget().deleteLater()
-
     def modules(self) -> str:
         """Yields the module name within the :attr:`searchPath` folder."""
         if not self._searchPath:
@@ -320,56 +345,112 @@ class LocalModuleWidget(QtWidgets.QWidget):
             if os.path.isdir(os.path.join(self._searchPath, module)) and module not in constants.EXCLUDED_MODULES:
                 yield module
 
+    @wordFinderUtils.devMode(wordFinderUtils.timed)
+    def searchWordInLocal(self, word, showComment, showContext, isLiteral, useSyntaxColor, numberOfExtraLine) -> None:
+        """Search the typed word or sentence in the checked modules."""
+        self.output.clear()
 
-class GitHubModuleWidget(QtWidgets.QWidget):
+        modulesWithPrints = []
 
-    STYLESHEET = \
-    """
-    QWidget {
-        background-color: #454545;
-        spacing: 2px;
-    }
-    """
+        for checkBox in self.filteredModules:
+            for modulePath in checkBox.modules:
+                print(modulePath)
+                try:
+                    with open(modulePath, 'r', encoding='utf-8') as reader:
+                        lines = reader.readlines()
+                        for lineNumber, line in enumerate(lines, start=1):
+                            # Show the comment characters.
+                            if showComment:
+                                if sentenceProcess.wordInLine(word, line, isLiteral):
+                                    modulesWithPrints.append(modulePath)
 
-    def __init__(self, parent: Optional[QtWidgets.QWidget]=None):
-        super().__init__(parent)
+                                    if showContext:
+                                        self.displayPreviousLines(numberOfExtraLine, modulePath, lineNumber)
 
-        self._searchPath = None
+                                    # Colorize the line dependent on the syntax.
+                                    colorizedLine = core.colorizeLine(line, word) if useSyntaxColor else line
 
-        self.allCheckBoxes = []
-        self.checkedCheckBoxes = []
+                                    self.output.appendHtml("<font color=#5de856>{}</font> <span>&#8594;</span> <font color=#dae63e>line {}</font> <span>&#8594;</span> {}".format(' <span>&#8594;</span> '.join(modulePath.split(os.sep)[-3:]), lineNumber, colorizedLine))
 
-        self.mainLayout = QtWidgets.QGridLayout(self)
-        self.setStyleSheet(self.STYLESHEET)
+                                    if showContext:
+                                        self.displayNextLines(numberOfExtraLine, modulePath, lineNumber)
 
-    @property
-    def searchPath(self):
-        return self._searchPath
+                            # Don't show the comment characters.
+                            else:
+                                if self.wordInLine(word, line, self.literalCheckBox.isChecked()):
+                                    if sentenceProcess.isLineValid(line):
+                                        modulesWithPrints.append(modulePath)
 
-    @searchPath.setter
-    def searchPath(self, newPath):
-        if newPath and os.path.isdir(newPath):
-            self._searchPath = newPath
+                                        if showContext:
+                                            self.displayPreviousLines(numberOfExtraLine, modulePath, lineNumber)
 
-    def addModules(self, moduleList):
-        columnMax = core.getConfigValueByName(COLUMN_COUNT)
-        row = 0
-        column = 0
+                                        # Colorize the line dependent on the syntax.
+                                        colorizedLine = core.colorizeLine(line, word) if self.syntaxAction.isChecked() else line
 
-        for module in moduleList:
-            checkBox = CheckBox(module)
+                                        self.output.appendHtml("<font color=#5de856>{}</font> <span>&#8594;</span> <font color=#dae63e>line {}</font> <span>&#8594;</span> {}".format(' <span>&#8594;</span> '.join(modulePath.split(os.sep)[-3:]), lineNumber, colorizedLine))
 
-            # Check the checkBox if it's previously checked.
-            if self.isCheckBoxPreviouslyChecked(checkBox):
-                checkBox.setChecked(True)
+                                        if showContext:
+                                            self.displayNextLines(numberOfExtraLine, modulePath, lineNumber)
 
-            self.mainLayout.addWidget(checkBox, row, column)
-            self.allCheckBoxes.append(checkBox)
+                except PermissionError:
+                    LOGGER.debug("Permission denied for {}".format(modulePath))
 
-            column += 1
-            if column == columnMax:
-                column = 0
-                row += 1
+        if not modulesWithPrints:
+            self.output.appendPlainText('The word [{}] is not found'.format(word))
+
+
+    def displayPreviousLines(self, numberOfExtraLine, modulePath: str, lineNumber: int) -> None:
+        """Opens the provided module to find the x lines before the provided line and appends them to the :var:`self.outPut` window.
+
+        Parameters:
+            modulePath: The module path.
+            lineNumber: The line that contains the word to search.
+        """
+        with open(modulePath, 'r', encoding='utf-8') as readFile:
+            lines = readFile.readlines()
+            index = int(numberOfExtraLine)
+
+            for number, line in enumerate(lines, start=1):
+                if number == lineNumber - index:
+                    self.output.appendHtml("<font color='grey'>{}</font> <span>&#8594;</span> <font color='grey'>line {}</font> <span>&#8594;</span> <font color' -> ''>{}</font>".format(" <span>&#8594;</span> ".join(modulePath.split(os.sep)[-3:]), number, line))
+                    index -= 1
+
+                    if index == 0:
+                        break
+
+    def displayNextLines(self, numberOfExtraLine, modulePath: str, lineNumber: int) -> None:
+        """Same method as :meth:`displayPreviousLines` but this will append the next x lines after the provided line.
+
+        Parameters:
+            modulePath: The module path.
+            lineNumber: The line that contains the word to search.
+        """
+        with open(modulePath, 'r', encoding='utf-8') as readFile:
+            lines = readFile.readlines()
+            index = 1
+
+            for number, line in enumerate(lines, start=1):
+                if number == lineNumber + index:
+                    self.output.appendHtml("<font color='grey'>{}</font> <span>&#8594;</span> <font color='grey'>line {}</font> <span>&#8594;</span> <font color' -> ''>{}</font>".format(" <span>&#8594;</span> ".join(modulePath.split(os.sep)[-3:]), number, line))
+                    index += 1
+
+                    if index == int(numberOfExtraLine) + 1:
+                        self.output.appendHtml('')
+                        break
+
+
+
+    @wordFinderUtils.storeConfig(constants.LOCAL_CHECKED_MODULES)
+    def checkAllCheckBoxes(self):
+        for checkBox in self.allCheckBoxes:
+            checkBox.setChecked(True)
+
+    @wordFinderUtils.storeConfig(constants.LOCAL_CHECKED_MODULES)
+    def unCheckAllCheckBoxes(self):
+        for checkBox in self.allCheckBoxes:
+            checkBox.setChecked(False)
+
+class GitHubModuleWidget(AbstractModuleWidget):
 
     @staticmethod
     def isCheckBoxPreviouslyChecked(checkBox: QtWidgets.QCheckBox) -> bool:
@@ -389,14 +470,16 @@ class GitHubModuleWidget(QtWidgets.QWidget):
         if checkBox.text() in checkedBoxes:
             return True
 
-    def clearLayout(self) -> None:
-        """Clears the main layout."""
-        self.allCheckBoxes.clear()
-        if self.mainLayout.count():
-            for index in range(self.mainLayout.count()):
-                item = self.mainLayout.itemAt(index)
-                if item:
-                    item.widget().deleteLater()
+
+    @wordFinderUtils.storeConfig(constants.GIT_HUB_CHECKED_MODULES)
+    def checkAllCheckBoxes(self):
+        for checkBox in self.allCheckBoxes:
+            checkBox.setChecked(True)
+
+    @wordFinderUtils.storeConfig(constants.GIT_HUB_CHECKED_MODULES)
+    def unCheckAllCheckBoxes(self):
+        for checkBox in self.allCheckBoxes:
+            checkBox.setChecked(False)
 
 
 class StackModulesWidget(QtWidgets.QTabWidget):
@@ -413,8 +496,6 @@ class StackModulesWidget(QtWidgets.QTabWidget):
         self.searchPath = searchPath
 
         self._buildWidget()
-        self.addLocalModules()
-        self.addGitHubModules()
 
     def _buildWidget(self):
         self.localWidget = LocalModuleWidget()
@@ -445,3 +526,9 @@ class StackModulesWidget(QtWidgets.QTabWidget):
     @property
     def allGitHubCheckBoxes(self):
         return self.githubWidget.allCheckBoxes
+
+    def searchWordInLocal(self, word, showComment, showContext, isLiteral, useSyntaxColor, numberOfExtraLine):
+        self.localWidget.searchWordInLocal(word, showComment, showContext, isLiteral, useSyntaxColor, numberOfExtraLine)
+
+    def searchWordInGit(self, word, showComment, showContext, isLitteral, useSyntaxColor, numberOfExtraLine):
+        self.githubWidget.searchWordInGit(word, showComment, showContext, isLiteral, useSyntaxColor, numberOfExtraLine)
