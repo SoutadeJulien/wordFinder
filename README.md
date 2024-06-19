@@ -7,12 +7,12 @@
 <h3>Word Finder</strong> is a tool to search for a word or a sentence in a single module or across multiple Python packages</h3>
 
 
-### This tool runs on Python < 3.9 and PySide 2.
+### This tool runs on Python < 3.9.
 
 <br>
 
->Word finder has only one dependency that is [PyGithub](https://github.com/PyGithub/PyGithub) which allows to get an access to the GitHub repositories.
-
+>Word finder has two dependency that is [PyGithub](https://github.com/PyGithub/PyGithub) which allows to get an access to the GitHub repositories,
+>and PySide 2
 - Run .wordFinderStart.bat
 - Change the search path. Then, you can search for a word or a sentence in the packages within the search path.
 
