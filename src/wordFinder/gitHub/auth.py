@@ -1,8 +1,8 @@
 from github import Github
 from github import Auth
 
-import constants
-import core
+from wordFinder import constants
+from wordFinder import core
 
 
 class GitHubGateway:

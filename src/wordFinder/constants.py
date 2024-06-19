@@ -1,4 +1,9 @@
+import os
+
+
 MODULES_PATH = r'C:\Users\tomtom\Documents\travail_dev\local_lhorda_tools'
+
+CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'utils/config.json')
 
 EXCLUDED_DIRECTORIES = ('__pycache__', '.idea', '.git', 'docs', '.gitignore')
 

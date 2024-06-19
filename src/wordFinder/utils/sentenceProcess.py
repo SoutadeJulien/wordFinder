@@ -1,23 +1,6 @@
 import re
 
-from wordFinder import constants
-
-
-def isLineValid(line: str) -> bool:
-    """Checks if the provided word or sentence contains an excluded character.
-
-    This method is used to get if the tool can output a line that contains a comment or a docstring.
-
-    Parameters:
-        line: The line to check.
-
-    Returns:
-        True if the :param:`line` does not contain any excluded characters, else, False.
-    """
-    for char in constants.EXCLUDED_CHARACTERS:
-        if char in line:
-            return False
-    return True
+from wordFinder.utils import syntaxColors
 
 
 def wordInLine(word: str, line: str, isLiteral: bool) -> bool:
@@ -44,3 +27,32 @@ def wordInLine(word: str, line: str, isLiteral: bool) -> bool:
                 return True
 
         return False
+
+
+def colorizeLine(line: str, wordToSearch: str) -> str:
+    """Colorizes the provided line depending on the targets words from the syntaxColors module.
+
+    Parameters:
+        line: The line where to search the word.
+        wordToSearch: the word to search in the :param:`line`.
+
+    Returns:
+        A colored line in HTML format.
+    """
+    coloredLine = line
+
+    for word in syntaxColors.regexTargetedWords:
+        matches = re.search(word.regex, coloredLine)
+
+        if matches:
+            if matches.group(word.matchingGroup) != '':
+                coloredLine = coloredLine.replace(matches.group(word.matchingGroup), f"<font color={word.color}>{matches.group(word.matchingGroup)}</font>")
+
+    for word, color in syntaxColors.targetedWords.items():
+        if word in line:
+            coloredLine = coloredLine.replace(word, f"<font color={color}>{word}</font>")
+
+    if wordToSearch in coloredLine:
+        coloredLine = coloredLine.replace(wordToSearch, f"""<font color={"#5ffa16"}>{wordToSearch}</font>""")
+
+    return coloredLine

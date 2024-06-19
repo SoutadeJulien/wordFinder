@@ -11,9 +11,9 @@ F = TypeVar('F', bound=Callable[..., Any])
 
 
 def devMode(dec: Callable[[Callable[..., Any]], F]) -> Callable[..., F]:
-    """This is a decorator with a condition that is determines if the decorator is activated.
+    """This is a decorator which can be transparent if the DEV_MODE constants is set to False.
 
-    dec: The decorator.
+    dec: The decorator to use.
 
     Returns:
         The function if :const:`DEV_MODE` is False, else, the decorator.

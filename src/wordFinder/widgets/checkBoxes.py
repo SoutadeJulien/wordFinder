@@ -7,6 +7,7 @@ from PySide2 import QtCore, QtWidgets, QtGui
 
 from wordFinder import constants
 
+
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(20)
 
@@ -113,24 +114,17 @@ class LocalPackageCheckBox(AbstractPackageCheckBox):
 
 
 class GitHubPackageCheckBox(AbstractPackageCheckBox):
-
+    """This class handle the Git part."""
     def getModules(self, path: str) -> None:
         """Get the module within the provided path.
 
         Parameters:
             path: The path where to search the modules.
+
+        Notes:
+            WIP, this feature is not implemented yet.
         """
-        return
-        for module in os.listdir(path):
-            modulePath = os.path.join(path, module)
-
-            if os.path.isdir(modulePath) and module not in constants.EXCLUDED_DIRECTORIES:
-                self.getModules(modulePath)
-
-            if module.rpartition('.')[-1] == 'py' and module not in constants.EXCLUDED_MODULES:
-                self.modules[module] = modulePath
-
-        LOGGER.debug("Modules from PackageCheckBox: {}".format(self.modules))
+        ...
 
 
 class CheckBoxModulesWindow(QtWidgets.QWidget):
@@ -165,7 +159,7 @@ class CheckBoxModulesWindow(QtWidgets.QWidget):
         Parameters:
             moduleName: The name of the module.
             modulePath: The path of the module.
-            state: id true, the module will be append to the :attr:`activatedModules`, otherwise, this module will be removed.
+            state: if true, the module will be appended to the :attr:`activatedModules`, otherwise, this module will be removed.
         """
         if state:
             self.activatedModules[moduleName] = modulePath

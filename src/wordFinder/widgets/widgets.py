@@ -396,7 +396,7 @@ class LocalModuleWidget(AbstractModuleWidget):
                                 if showContext:
                                     self.displayPreviousLines(numberOfExtraLine, modulePath, lineNumber)
                                 # Colorize the line dependent on the syntax.
-                                processedLine = core.colorizeLine(line, word) if useSyntaxColor else line
+                                processedLine = sentenceProcess.colorizeLine(line, word) if useSyntaxColor else line
 
                                 self.output.appendHtml(
                                     "<font color=#40D139>{}</font> <span>&#8594;</span> <font color=#40D139>line {}</font> <span>&#8594;</span> {}".format(' <span>&#8594;</span> '.join(
@@ -430,7 +430,7 @@ class LocalModuleWidget(AbstractModuleWidget):
 
             for number, line in enumerate(lines, start=1):
                 if number == lineNumber - index:
-                    self.output.appendHtml("<font color='grey'>{}</font> <span>&#8594;</span> <font color='grey'>line {}</font> <span>&#8594;</span> <font color' -> ''>{}</font>".format(" <span>&#8594;</span> ".join(modulePath.split(os.sep)[-3:]), number, line))
+                    self.output.appendHtml("<font color='grey'>{}</font> <span>&#8594;</span> <font color='grey'>line {}</font> <span>&#8594;</span> <font color' -> {}</font>".format(" <span>&#8594;</span> ".join(modulePath.split(os.sep)[-3:]), number, line))
                     index -= 1
 
                     if index == 0:
@@ -450,7 +450,7 @@ class LocalModuleWidget(AbstractModuleWidget):
 
             for number, line in enumerate(lines, start=1):
                 if number == lineNumber + index:
-                    self.output.appendHtml("<font color='grey'>{}</font> <span>&#8594;</span> <font color='grey'>line {}</font> <span>&#8594;</span> <font color' -> ''>{}</font>".format(" <span>&#8594;</span> ".join(modulePath.split(os.sep)[-3:]), number, line))
+                    self.output.appendHtml("<font color='grey'>{}</font> <span>&#8594;</span> <font color='grey'>line {}</font> <span>&#8594;</span> <font color' -> {}</font>".format(" <span>&#8594;</span> ".join(modulePath.split(os.sep)[-3:]), number, line))
                     index += 1
 
                     if index == int(numberOfExtraLine) + 1:
@@ -538,7 +538,7 @@ class GitHubModuleWidget(AbstractModuleWidget):
                                 self.displayPreviousLines(numberOfExtraLine, content.path, decodedContent, lineNumber)
 
                             # Colorize the line dependent on the syntax.
-                            processedLine = core.colorizeLine(line, word) if useSyntaxColor else line
+                            processedLine = sentenceProcess.colorizeLine(line, word) if useSyntaxColor else line
 
                             self.output.appendHtml(
                                 "<font color=#40D139>{}</font> <span>&#8594;</span> <font color=#40D139>line {}</font> <span>&#8594;</span> {}".format(

@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class Matching:
-    """This class's purpose is to have a regex pattern, its matching group and the associated color in the same place"""
+    """The purpose of this class is to keep a regex pattern, its matching group, and the associated color together in one place."""
     regex: str
     matchingGroup: str
     color: str

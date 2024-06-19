@@ -48,19 +48,12 @@ class WordFinder(QtWidgets.QDialog):
 
         # Ui setup.
         self.devModeAction = self.uiSetup.addAction('Dev mode')
-        self.devModeAction.setCheckable(True)
-
-        # Get if the dev mode has been set.
-        if core.getConfigValueByName(constants.DEV_MODE):
-            self.devModeAction.setChecked(True)
 
         self.layoutAction = self.uiSetup.addAction('Layout')
 
         self.syntaxAction = self.uiSetup.addAction('Syntax highlighting')
-        self.syntaxAction.setCheckable(True)
-        self.syntaxAction.setChecked(True)
 
-        # Github setup.
+        # GitHub setup.
         self.githubTokenAction = self.githubSetup.addAction("Set GitHub personal access token")
 
         self.searchPathLabel = QtWidgets.QLabel()
@@ -104,6 +97,15 @@ class WordFinder(QtWidgets.QDialog):
         self.searchModeGroup.setTitle("Search mode")
         self.radioSearchModeLayout.addStretch()
 
+        # Get if the dev mode has been set.
+        if core.getConfigValueByName(constants.DEV_MODE):
+            self.devModeAction.setChecked(True)
+
+        self.devModeAction.setCheckable(True)
+        self.syntaxAction.setCheckable(True)
+        self.syntaxAction.setChecked(True)
+
+
         self.optionLayout.addStretch()
         self.searchPathLayout.addStretch()
 
@@ -143,7 +145,7 @@ class WordFinder(QtWidgets.QDialog):
         self.checkButton.clicked.connect(self.searchWord)
 
     def closeEvent(self, event: QtGui.QCloseEvent) -> None:
-        """Emits a signal when this ui is closed to store the parameters decorated by @wordFinderUtils.storeConfig"""
+        """Emits a signal when the ui is closed to store the method decorated by @wordFinderUtils.storeConfig"""
         event.accept()
         self.closed.emit()
 
@@ -161,7 +163,7 @@ class WordFinder(QtWidgets.QDialog):
     def _devMode(self) -> bool:
         """This method handle the dev mode.
 
-        Basically, the dev mode will activate the :func:`wordFinderUtils.devMode` decorator and set to DEBUG the :const:LOGGER logger.
+        Basically, the dev mode will activate the :func:`wordFinderUtils.devMode` decorator and set to DEBUG all the LOGGERS.
 
         Returns:
             The dev mode state.
@@ -221,7 +223,6 @@ class WordFinder(QtWidgets.QDialog):
         pathWindow = widgets.SearchPathWindow()
         pathWindow.exec_()
 
-        # Set the new search path.
         self.searchPath = pathWindow.newPath()
         self.refreshModules()
 
@@ -236,8 +237,6 @@ class WordFinder(QtWidgets.QDialog):
         
     def checkAllCheckBoxes(self) -> None:
         """Checks all checkBoxes"""
-        LOGGER.debug("All checkboxes from module widget: {}".format(self.stackedModulesWidget.allCheckBoxes))
-
         for checkBox in self.stackedModulesWidget.allCheckBoxes:
             checkBox.setChecked(True)
 
