@@ -44,7 +44,7 @@ class WordFinder(QtWidgets.QDialog):
         self.menuBar = QtWidgets.QMenuBar()
 
         self.uiSetup = self.menuBar.addMenu('Options')
-        self.githubSetup = self.menuBar.addMenu('Github')
+        self.githubSetup = self.menuBar.addMenu('GitHub')
 
         # Ui setup.
         self.devModeAction = self.uiSetup.addAction('Dev mode')
@@ -61,7 +61,7 @@ class WordFinder(QtWidgets.QDialog):
         self.syntaxAction.setChecked(True)
 
         # Github setup.
-        self.githubTokenAction = self.githubSetup.addAction("Set Github personal access tokens ")
+        self.githubTokenAction = self.githubSetup.addAction("Set GitHub personal access token")
 
         self.searchPathLabel = QtWidgets.QLabel()
         self.moduleToCheckLabel = QtWidgets.QLabel("Modules to check")
