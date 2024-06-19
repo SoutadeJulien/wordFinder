@@ -2,15 +2,17 @@ import logging
 from PySide2 import QtWidgets, QtCore, QtGui
 from typing import List
 
+from wordFinder import resources
 import constants
-from wordFinder.widgets import widgets
+from wordFinder.widgets import widgets, checkBoxes
 import core
 
 from utils import wordFinderUtils
 
+
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(20)
-logging.basicConfig(filename='./utils/wordFinder.log', level=logging.INFO)
+logging.basicConfig(filename='utils/wordFinder.log', level=logging.INFO)
 
 
 class WordFinder(QtWidgets.QDialog):
@@ -21,6 +23,7 @@ class WordFinder(QtWidgets.QDialog):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
 
+        # Get if a search path has been stored.
         self.searchPath = core.getConfigValueByName(constants.SEARCH_PATH)
 
         self._buildUi()
@@ -30,7 +33,7 @@ class WordFinder(QtWidgets.QDialog):
         # Add modules.
         self.stackedModulesWidget.setModulesWidgetSearchPath(self.searchPath)
         self.stackedModulesWidget.addLocalModules()
-        # self.stackedModulesWidget.addGitHubModules()
+        self.stackedModulesWidget.addGitHubModules()
 
     def _buildUi(self) -> None:
         self.mainLayout = QtWidgets.QVBoxLayout(self)
@@ -47,6 +50,7 @@ class WordFinder(QtWidgets.QDialog):
         self.devModeAction = self.uiSetup.addAction('Dev mode')
         self.devModeAction.setCheckable(True)
 
+        # Get if the dev mode has been set.
         if core.getConfigValueByName(constants.DEV_MODE):
             self.devModeAction.setChecked(True)
 
@@ -72,9 +76,6 @@ class WordFinder(QtWidgets.QDialog):
         self.radioSearchModeLayout.addWidget(self.literalCheckBox)
         self.radioSearchModeLayout.addWidget(self.regexCheckBox)
 
-        self.showCommentCheckBox = QtWidgets.QCheckBox("Show comments")
-        self.showCommentCheckBox.setChecked(True)
-
         self.showContextCheckBox = QtWidgets.QCheckBox("Show context")
         self.contextNumberComboBox = QtWidgets.QComboBox()
         self.checkButton = widgets.PushButton('check')
@@ -90,7 +91,6 @@ class WordFinder(QtWidgets.QDialog):
         self.searchPathLayout.addWidget(self.searchPathLabel)
         self.mainLayout.addWidget(self.separatorOne)
         self.mainLayout.addLayout(self.optionLayout)
-        self.optionLayout.addWidget(self.showCommentCheckBox)
         self.optionLayout.addWidget(self.showContextCheckBox)
         self.optionLayout.addWidget(self.contextNumberComboBox)
         self.mainLayout.addWidget(self.separatorTwo)
@@ -143,6 +143,7 @@ class WordFinder(QtWidgets.QDialog):
         self.checkButton.clicked.connect(self.searchWord)
 
     def closeEvent(self, event: QtGui.QCloseEvent) -> None:
+        """Emits a signal when this ui is closed to store the parameters decorated by @wordFinderUtils.storeConfig"""
         event.accept()
         self.closed.emit()
 
@@ -167,12 +168,19 @@ class WordFinder(QtWidgets.QDialog):
         """
         wordFinderUtils.DEV_MODE = self.devModeAction.isChecked()
 
+        widgetLogger = logging.getLogger(widgets.__name__)
+        checkBoxLogger = logging.getLogger(checkBoxes.__name__)
+
         if wordFinderUtils.DEV_MODE:
             self.devModeAction.setIcon(QtGui.QIcon("wfIcons:check.png"))
+            widgetLogger.setLevel(10)
+            checkBoxLogger.setLevel(10)
             LOGGER.setLevel(10)
 
         else:
             self.devModeAction.setIcon(QtGui.QIcon(""))
+            widgetLogger.setLevel(20)
+            checkBoxLogger.setLevel(20)
             LOGGER.setLevel(20)
 
         self.devModeAction.setChecked(wordFinderUtils.DEV_MODE)
@@ -188,6 +196,7 @@ class WordFinder(QtWidgets.QDialog):
 
         # Set the modules with the new layout configuration.
         self.stackedModulesWidget.addLocalModules()
+        self.stackedModulesWidget.addGitHubModules()
 
     def onSyntaxActionTriggered(self) -> None:
         """Sets the syntax action icon"""
@@ -199,6 +208,7 @@ class WordFinder(QtWidgets.QDialog):
 
     @wordFinderUtils.storeConfig(constants.GIT_HUB_HEY)
     def onGithubTokenActionTriggered(self):
+        """Opens a window to allow the user to store an GitHub developer token to grant access to the repositories"""
         githubWindow = widgets.GitHubWindow()
         githubWindow.exec_()
 
@@ -207,7 +217,7 @@ class WordFinder(QtWidgets.QDialog):
         return githubWindow.gitHubToken()
 
     def setSearchPath(self) -> None:
-        """Opens a new window to let the user write the path where to query the modules."""
+        """Opens a new window to allow the user write the path where to query the modules."""
         pathWindow = widgets.SearchPathWindow()
         pathWindow.exec_()
 
@@ -218,7 +228,7 @@ class WordFinder(QtWidgets.QDialog):
         LOGGER.debug("Search path: {}".format(self.searchPath))
 
     def refreshModules(self) -> None:
-        """Reset the module path in the module widget and this class, adds the new module's checkBoxes to this window."""
+        """Refresh the modules checkboxes."""
         self.searchPathLabel.setText("Search path: {}".format(self.searchPath))
         self.stackedModulesWidget.setModulesWidgetSearchPath(self.searchPath)
         self.stackedModulesWidget.addLocalModules()
@@ -237,11 +247,10 @@ class WordFinder(QtWidgets.QDialog):
             checkBox.setChecked(False)
 
     def searchWord(self) -> None:
-
+        """Search a word in the local or GitHub widget"""
         if not self.stackedModulesWidget.currentIndex():
             self.stackedModulesWidget.searchWordInLocal(
                 self.wordToSearch.text(),
-                self.showCommentCheckBox.isChecked(),
                 self.showContextCheckBox.isChecked(),
                 self.literalCheckBox.isChecked(),
                 self.syntaxAction.isChecked(),
@@ -251,14 +260,8 @@ class WordFinder(QtWidgets.QDialog):
 
         self.stackedModulesWidget.searchWordInGitHub(
             self.wordToSearch.text(),
-            self.showCommentCheckBox.isChecked(),
             self.showContextCheckBox.isChecked(),
             self.literalCheckBox.isChecked(),
             self.syntaxAction.isChecked(),
             self.contextNumberComboBox.currentText()
         )
-
-    def searchWordInGitHub(self):
-        for checkBox in self.stackedModulesWidget.allGitHubCheckBoxes:
-            if not checkBox.isChecked():
-                continue

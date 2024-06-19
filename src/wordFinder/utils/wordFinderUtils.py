@@ -1,12 +1,14 @@
 import time
 from typing import Callable, Any, TypeVar
 
-import core
+from wordFinder import core
+
 
 DEV_MODE = False
 
 
 F = TypeVar('F', bound=Callable[..., Any])
+
 
 def devMode(dec: Callable[[Callable[..., Any]], F]) -> Callable[..., F]:
     """This is a decorator with a condition that is determines if the decorator is activated.
@@ -26,7 +28,7 @@ def devMode(dec: Callable[[Callable[..., Any]], F]) -> Callable[..., F]:
 
 
 def timed(function: Callable[..., Any]) -> Callable[..., Any]:
-    """A decorator to time the execution of a function """
+    """"A decorator to time the execution of a function"""
     def wrapper(*args, **kwargs) -> Any:
         start = time.time()
         result = function(*args, **kwargs)

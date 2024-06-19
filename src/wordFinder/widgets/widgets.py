@@ -1,6 +1,6 @@
 import os
 import logging
-from typing import Optional, List, Mapping, Iterable, Any
+from typing import Optional, List
 
 from PySide2 import QtCore, QtWidgets, QtGui
 
@@ -10,7 +10,6 @@ from constants import COLUMN_COUNT
 from wordFinder.utils import wordFinderUtils
 from wordFinder.utils import sentenceProcess
 from wordFinder import constants
-
 from wordFinder.gitHub import auth
 
 
@@ -65,6 +64,7 @@ class OutputWidget(QtWidgets.QPlainTextEdit):
         """
 
     def __init__(self):
+        """This widget is a classic QPlainTextEdit with a minimum size hint to output the founded sentence."""
         super().__init__()
         self.setStyleSheet(self.STYLESHEET)
 
@@ -193,7 +193,8 @@ class GitHubWindow(QtWidgets.QDialog):
         self.cancelButton.clicked.connect(self.reject)
 
     @wordFinderUtils.storeConfig(constants.GIT_HUB_HEY)
-    def gitHubToken(self):
+    def gitHubToken(self) -> str:
+        """Get the user GitHub token"""
         token = self.tokenLineEdit.text()
         self.accept()
 
@@ -205,18 +206,22 @@ class AbstractModuleWidget(QtWidgets.QWidget):
     STYLESHEET = \
     """
     QWidget {
-        background-color: #454545;
+        background-color: #333333;
         spacing: 2px;
+        margin: 2px
     }
     """
 
     def __init__(self, parent: Optional[QtWidgets.QWidget]=None):
+        """This is a metaclass for the LocalModuleWidget and the GitHubModuleWidget.
+
+        It's responsible for getting the modules in the :attr:`searchPath` and append them the :attr:`allCheckBoxes`.
+        """
         super().__init__(parent)
 
         self._searchPath = None
 
         self.allCheckBoxes = []
-        self.checkedCheckBoxes = []
 
         self._buildUi()
         self._setupUi()
@@ -259,6 +264,7 @@ class AbstractModuleWidget(QtWidgets.QWidget):
 
     @property
     def searchPath(self):
+        """The path where to get the modules."""
         return self._searchPath
 
     @searchPath.setter
@@ -267,6 +273,11 @@ class AbstractModuleWidget(QtWidgets.QWidget):
             self._searchPath = newPath
 
     def addModules(self) -> Optional[List[str]]:
+        """Adds the modules found in the :attr:`searchPath` in a checkBox, get if this module was previously checked,
+        then, adds it to the allCheckBoxes list.
+        """
+        self.clearLayout()
+        # Get how many columns has been set from the config.json
         columnMax = core.getConfigValueByName(COLUMN_COUNT)
         row = 0
         column = 0
@@ -275,7 +286,7 @@ class AbstractModuleWidget(QtWidgets.QWidget):
             return
 
         for module in self.modules():
-            checkBox = checkBoxes.CheckBox(module, os.path.join(self.searchPath, module))
+            checkBox = checkBoxes.LocalPackageCheckBox(module, os.path.join(self.searchPath, module))
 
             # Check the checkBox if it's previously checked.
             if self.isCheckBoxPreviouslyChecked(checkBox):
@@ -289,6 +300,12 @@ class AbstractModuleWidget(QtWidgets.QWidget):
                 column = 0
                 row += 1
 
+    def modules(self) -> str:
+        """Yields the module name within the :attr:`searchPath` folder."""
+        for repo in auth.gitHubRepositories():
+            if repo not in constants.EXCLUDED_MODULES:
+                yield repo.full_name
+
     def clearLayout(self) -> None:
         """Clears the main layout."""
         self.allCheckBoxes.clear()
@@ -300,11 +317,11 @@ class AbstractModuleWidget(QtWidgets.QWidget):
                     item.widget().deleteLater()
 
     @property
-    def filteredModules(self) -> Iterable[Any]:
+    def checkedModules(self) -> List[Optional[checkBoxes.LocalPackageCheckBox]]:
         """Filters the checked checkBoxes.
 
         Returns:
-            A dictionary containing each checked module's names as key and they path as value.
+            A list containing each checked module.
         """
         allModules = []
 
@@ -316,7 +333,9 @@ class AbstractModuleWidget(QtWidgets.QWidget):
 
         return allModules
 
+
 class LocalModuleWidget(AbstractModuleWidget):
+    """This widget is responsible for searching within the local packages."""
 
     @staticmethod
     def isCheckBoxPreviouslyChecked(checkBox: QtWidgets.QCheckBox) -> bool:
@@ -346,63 +365,62 @@ class LocalModuleWidget(AbstractModuleWidget):
                 yield module
 
     @wordFinderUtils.devMode(wordFinderUtils.timed)
-    def searchWordInLocal(self, word, showComment, showContext, isLiteral, useSyntaxColor, numberOfExtraLine) -> None:
-        """Search the typed word or sentence in the checked modules."""
-        self.output.clear()
+    def searchWordInLocal(
+            self,
+            word: str,
+            showContext: bool,
+            isLiteral: bool,
+            useSyntaxColor: bool,
+            numberOfExtraLine: int
+    ) -> None:
+        """Search a word or sentence in the checked modules.
 
+        Parameters:
+            word: The word to search.
+            showContext: If true, the method will output [x] lines before and after the found sentence.
+            isLiteral: If true, the method will search if the provided word is in the sentence, if false, the method will search the word using a regex.
+            useSyntaxColor: If true, the output text will be colored, is false, it will be white.
+            numberOfExtraLine: The number of line to display if the showComment parameter is True.
+        """
+        self.output.clear()
         modulesWithPrints = []
 
-        for checkBox in self.filteredModules:
-            for modulePath in checkBox.modules:
-                print(modulePath)
+        for checkBox in self.checkedModules:
+            for modulePath in checkBox.modules.values():
                 try:
                     with open(modulePath, 'r', encoding='utf-8') as reader:
                         lines = reader.readlines()
                         for lineNumber, line in enumerate(lines, start=1):
-                            # Show the comment characters.
-                            if showComment:
-                                if sentenceProcess.wordInLine(word, line, isLiteral):
-                                    modulesWithPrints.append(modulePath)
+                            if sentenceProcess.wordInLine(word, line, isLiteral):
+                                modulesWithPrints.append(modulePath)
+                                if showContext:
+                                    self.displayPreviousLines(numberOfExtraLine, modulePath, lineNumber)
+                                # Colorize the line dependent on the syntax.
+                                processedLine = core.colorizeLine(line, word) if useSyntaxColor else line
 
-                                    if showContext:
-                                        self.displayPreviousLines(numberOfExtraLine, modulePath, lineNumber)
+                                self.output.appendHtml(
+                                    "<font color=#40D139>{}</font> <span>&#8594;</span> <font color=#40D139>line {}</font> <span>&#8594;</span> {}".format(' <span>&#8594;</span> '.join(
+                                    modulePath.split(os.sep)[-3:]),
+                                        lineNumber,
+                                        processedLine
+                                    )
+                                )
 
-                                    # Colorize the line dependent on the syntax.
-                                    colorizedLine = core.colorizeLine(line, word) if useSyntaxColor else line
-
-                                    self.output.appendHtml("<font color=#5de856>{}</font> <span>&#8594;</span> <font color=#dae63e>line {}</font> <span>&#8594;</span> {}".format(' <span>&#8594;</span> '.join(modulePath.split(os.sep)[-3:]), lineNumber, colorizedLine))
-
-                                    if showContext:
-                                        self.displayNextLines(numberOfExtraLine, modulePath, lineNumber)
-
-                            # Don't show the comment characters.
-                            else:
-                                if self.wordInLine(word, line, self.literalCheckBox.isChecked()):
-                                    if sentenceProcess.isLineValid(line):
-                                        modulesWithPrints.append(modulePath)
-
-                                        if showContext:
-                                            self.displayPreviousLines(numberOfExtraLine, modulePath, lineNumber)
-
-                                        # Colorize the line dependent on the syntax.
-                                        colorizedLine = core.colorizeLine(line, word) if self.syntaxAction.isChecked() else line
-
-                                        self.output.appendHtml("<font color=#5de856>{}</font> <span>&#8594;</span> <font color=#dae63e>line {}</font> <span>&#8594;</span> {}".format(' <span>&#8594;</span> '.join(modulePath.split(os.sep)[-3:]), lineNumber, colorizedLine))
-
-                                        if showContext:
-                                            self.displayNextLines(numberOfExtraLine, modulePath, lineNumber)
+                                if showContext:
+                                    self.displayNextLines(numberOfExtraLine, modulePath, lineNumber)
 
                 except PermissionError:
                     LOGGER.debug("Permission denied for {}".format(modulePath))
 
         if not modulesWithPrints:
-            self.output.appendPlainText('The word [{}] is not found'.format(word))
+            self.output.appendPlainText('The word "{}" has not been found'.format(word))
 
 
-    def displayPreviousLines(self, numberOfExtraLine, modulePath: str, lineNumber: int) -> None:
-        """Opens the provided module to find the x lines before the provided line and appends them to the :var:`self.outPut` window.
+    def displayPreviousLines(self, numberOfExtraLine: int, modulePath: str, lineNumber: int) -> None:
+        """Opens the provided module to find the [x] lines before the provided line and appends them to the output window.
 
         Parameters:
+            numberOfExtraLine: The [x] lines to display.
             modulePath: The module path.
             lineNumber: The line that contains the word to search.
         """
@@ -418,10 +436,11 @@ class LocalModuleWidget(AbstractModuleWidget):
                     if index == 0:
                         break
 
-    def displayNextLines(self, numberOfExtraLine, modulePath: str, lineNumber: int) -> None:
+    def displayNextLines(self, numberOfExtraLine: int, modulePath: str, lineNumber: int) -> None:
         """Same method as :meth:`displayPreviousLines` but this will append the next x lines after the provided line.
 
         Parameters:
+            numberOfExtraLine: The [x] lines to display.
             modulePath: The module path.
             lineNumber: The line that contains the word to search.
         """
@@ -438,20 +457,25 @@ class LocalModuleWidget(AbstractModuleWidget):
                         self.output.appendHtml('')
                         break
 
-
-
     @wordFinderUtils.storeConfig(constants.LOCAL_CHECKED_MODULES)
     def checkAllCheckBoxes(self):
+        """Checks all the checkBoxes within the self.allCheckBoxes list."""
         for checkBox in self.allCheckBoxes:
             checkBox.setChecked(True)
 
     @wordFinderUtils.storeConfig(constants.LOCAL_CHECKED_MODULES)
     def unCheckAllCheckBoxes(self):
+        """unchecks all the checkBoxes within the self.allCheckBoxes list."""
         for checkBox in self.allCheckBoxes:
             checkBox.setChecked(False)
 
-class GitHubModuleWidget(AbstractModuleWidget):
 
+class GitHubModuleWidget(AbstractModuleWidget):
+    """This is the widget responsible for the GitHub section
+
+    Warning:
+        This widget is currently under development, it is not
+    """
     @staticmethod
     def isCheckBoxPreviouslyChecked(checkBox: QtWidgets.QCheckBox) -> bool:
         """Gets if the provided checkBox is present in the config file, if it is, sets it to checked.
@@ -473,13 +497,131 @@ class GitHubModuleWidget(AbstractModuleWidget):
 
     @wordFinderUtils.storeConfig(constants.GIT_HUB_CHECKED_MODULES)
     def checkAllCheckBoxes(self):
+        """Checks all the checkBoxes within the self.allCheckBoxes list."""
         for checkBox in self.allCheckBoxes:
             checkBox.setChecked(True)
 
     @wordFinderUtils.storeConfig(constants.GIT_HUB_CHECKED_MODULES)
     def unCheckAllCheckBoxes(self):
+        """unchecks all the checkBoxes within the self.allCheckBoxes list."""
         for checkBox in self.allCheckBoxes:
             checkBox.setChecked(False)
+
+    def searchWordInGitHub(
+            self,
+            word: str,
+            showContext: bool,
+            isLiteral: bool,
+            useSyntaxColor: bool,
+            numberOfExtraLine: int
+        ) -> None:
+        """Search a word or sentence in the checked modules.
+
+        Parameters:
+            word: The word to search.
+            showContext: If true, the method will output [x] lines before and after the found sentence.
+            isLiteral: If true, the method will search if the provided word is in the sentence, if false, the method will search the word using a regex.
+            useSyntaxColor: If true, the output text will be colored, is false, it will be white.
+            numberOfExtraLine: The number of line to display if the showComment parameter is True.
+        """
+        self.output.clear()
+        modulesWithPrints = []
+
+        for checkBox in self.checkedModules:
+            for content in auth.getContent(checkBox.text(), ""):
+                try:
+                    decodedContent = content.decoded_content.decode('utf-8')
+                    for lineNumber, line in enumerate(decodedContent.splitlines()):
+                        if sentenceProcess.wordInLine(word, line, isLiteral):
+                            modulesWithPrints.append(checkBox.text())
+                            if showContext:
+                                self.displayPreviousLines(numberOfExtraLine, content.path, decodedContent, lineNumber)
+
+                            # Colorize the line dependent on the syntax.
+                            processedLine = core.colorizeLine(line, word) if useSyntaxColor else line
+
+                            self.output.appendHtml(
+                                "<font color=#40D139>{}</font> <span>&#8594;</span> <font color=#40D139>line {}</font> <span>&#8594;</span> {}".format(
+                                    content.path,
+                                    lineNumber,
+                                    processedLine
+                                )
+                            )
+
+                            if showContext:
+                                self.displayNextLines(numberOfExtraLine, content.path, decodedContent, lineNumber)
+
+                except UnicodeDecodeError:
+                    LOGGER.debug("Cannot read {} file".format(content.path))
+
+            if not modulesWithPrints:
+                self.output.appendPlainText('The word "{}" has not been found'.format(word))
+
+    def displayPreviousLines(self, numberOfExtraLine: int, moduleName: str, decodedContent: str, lineNumber: int) -> None:
+        """Opens the provided module to find the [x] lines before the provided line and appends them to the output window.
+
+        Parameters:
+            numberOfExtraLine: The [x] lines to display.
+            moduleName: The name to display before the line.
+            decodedContent: The str content.
+            lineNumber: The line that contains the word to search.
+        """
+        index = int(numberOfExtraLine)
+
+        for number, line in enumerate(decodedContent.splitlines()):
+            if number == lineNumber - index:
+                self.output.appendHtml("<font color='grey'>{}</font> <span>&#8594;</span> <font color='grey'>line {}</font> <span>&#8594;</span> <font color' -> ''>{}</font>".format(moduleName, lineNumber, line))
+                index -= 1
+
+                if index == 0:
+                    break
+
+    def displayNextLines(self, numberOfExtraLine: int, moduleName: str, decodedContent: str, lineNumber: int) -> None:
+        """Same method as :meth:`displayPreviousLines` but this will append the next x lines after the provided line.
+
+        Parameters:
+            numberOfExtraLine: The [x] lines to display.
+            moduleName: The name to display before the line.
+            decodedContent: The str content.
+            lineNumber: The line that contains the word to search.
+        """
+        index = 1
+
+        for number, line in enumerate(decodedContent.splitlines()):
+            if number == lineNumber + index:
+                self.output.appendHtml("<font color='grey'>{}</font> <span>&#8594;</span> <font color='grey'>line {}</font> <span>&#8594;</span> <font color' -> ''>{}</font>".format(moduleName, lineNumber, line))
+                index += 1
+                if index == int(numberOfExtraLine) + 1:
+                    self.output.appendHtml('')
+                    break
+
+    def addModules(self) -> Optional[List[str]]:
+        """Adds the modules found in the :attr:`searchPath` in a checkBox, get if this module was previously checked,
+        then, adds it to the allCheckBoxes list.
+        """
+        self.clearLayout()
+        # Get how many columns has been set from the config.json
+        columnMax = core.getConfigValueByName(COLUMN_COUNT)
+        row = 0
+        column = 0
+
+        if not self.modules():
+            return
+
+        for module in self.modules():
+            checkBox = checkBoxes.GitHubPackageCheckBox(module, module)
+
+            # Check the checkBox if it's previously checked.
+            if self.isCheckBoxPreviouslyChecked(checkBox):
+                checkBox.setChecked(True)
+
+            self.moduleLayout.addWidget(checkBox, row, column)
+            self.allCheckBoxes.append(checkBox)
+
+            column += 1
+            if column == columnMax:
+                column = 0
+                row += 1
 
 
 class StackModulesWidget(QtWidgets.QTabWidget):
@@ -505,19 +647,20 @@ class StackModulesWidget(QtWidgets.QTabWidget):
         self.githubTab = self.addTab(self.githubWidget, 'Github')
 
     def setModulesWidgetSearchPath(self, path):
+        """Pass the search path to each search widget"""
         self.localWidget.searchPath = path
         self.githubWidget.searchPath = path
 
     def addLocalModules(self):
         """Adds the modules within the :attr:`searchPath` to the main layout."""
-        self.localWidget.clearLayout()
         self.localWidget.addModules()
 
     def addGitHubModules(self):
+        """This method is currently not functional"""
         gitHubToken = core.getConfigValueByName(constants.GIT_HUB_HEY)
 
         if gitHubToken:
-            self.githubWidget.addModules([repo.full_name for repo in auth.gitHubRepositories()])
+            self.githubWidget.addModules()
 
     @property
     def allLocalCheckBoxes(self):
@@ -527,8 +670,12 @@ class StackModulesWidget(QtWidgets.QTabWidget):
     def allGitHubCheckBoxes(self):
         return self.githubWidget.allCheckBoxes
 
-    def searchWordInLocal(self, word, showComment, showContext, isLiteral, useSyntaxColor, numberOfExtraLine):
-        self.localWidget.searchWordInLocal(word, showComment, showContext, isLiteral, useSyntaxColor, numberOfExtraLine)
+    def searchWordInLocal(self, word, showContext, isLiteral, useSyntaxColor, numberOfExtraLine):
+        """This method's purpose is to send the argument to the local search widget, to get the documentation
+        of the method, please, refer to the :meth:`LocalModuleWidget.searchWordInLocal` method"""
+        self.localWidget.searchWordInLocal(word, showContext, isLiteral, useSyntaxColor, numberOfExtraLine)
 
-    def searchWordInGit(self, word, showComment, showContext, isLitteral, useSyntaxColor, numberOfExtraLine):
-        self.githubWidget.searchWordInGit(word, showComment, showContext, isLiteral, useSyntaxColor, numberOfExtraLine)
+    def searchWordInGitHub(self, word, showContext, isLiteral, useSyntaxColor, numberOfExtraLine):
+        """This method's purpose is to send the argument to the local search widget, to get the documentation
+        of the method, please, refer to the :meth:`LocalModuleWidget.searchWordInGit` method"""
+        self.githubWidget.searchWordInGitHub(word, showContext, isLiteral, useSyntaxColor, numberOfExtraLine)

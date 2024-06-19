@@ -7,21 +7,11 @@ from PySide2.QtCore import Qt
 
 import core
 
-wordFinderPath = os.path.dirname(os.path.abspath(os.path.dirname(__file__)))
-gitHubPath = os.path.join(os.path.dirname(os.path.abspath(os.path.dirname(__file__))), r'gitHub\module\github')
-
-def isPathAppended(moduleName):
-    for modulePath in sys.path:
-        if modulePath == moduleName:
-            return True
-    return False
+WORD_FINDER_PATH = os.path.dirname(os.path.abspath(os.path.dirname(__file__)))
 
 
-if not isPathAppended(wordFinderPath):
-    sys.path.append(wordFinderPath)
-
-if not isPathAppended(gitHubPath):
-    sys.path.append(gitHubPath)
+if not core.isPathAppended(WORD_FINDER_PATH):
+    sys.path.append(WORD_FINDER_PATH)
 
 
 from wordFinder import wordFinderUi
@@ -53,7 +43,5 @@ if not core.getConfig():
     core.makeDefaultConfig()
 
 wfUi = wordFinderUi.WordFinder()
-
-
 wfUi.show()
 qApp.exec_()

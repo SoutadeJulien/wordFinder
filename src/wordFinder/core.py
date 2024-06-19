@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 from typing import Optional, Mapping, Union
 import re
@@ -8,6 +9,13 @@ from utils import syntaxColors
 
 
 CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'utils/config.json')
+
+
+def isPathAppended(moduleName):
+    for modulePath in sys.path:
+        if modulePath == moduleName:
+            return True
+    return False
 
 
 def makeDefaultConfig() -> None:

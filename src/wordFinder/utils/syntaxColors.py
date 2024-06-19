@@ -2,8 +2,8 @@ from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
-class RegexWord:
-    """This class allows to find a word in a line"""
+class Matching:
+    """This class's purpose is to have a regex pattern, its matching group and the associated color in the same place"""
     regex: str
     matchingGroup: str
     color: str
@@ -23,15 +23,15 @@ targetedWords = {
 
 # Regex matching.
 regexTargetedWords = [
-    RegexWord(r"(?:[(])(?P<arguments>[\w\[\]: ,*.']*)(?:[)])", 'arguments', "#f2a049"),
-    RegexWord(r"\b(?P<Union>Union)\b", 'Union', "#fff566"),
-    RegexWord(r"\b(?P<Callable>Callable)\b", 'Callable', "#fff566"),
-    RegexWord(r"\b(?P<Mapping>Mapping)\b", 'Mapping', "#fff566"),
-    RegexWord(r"\b(?P<str>str)\b", 'str', "#31aade"),
-    RegexWord(r"\b(?P<int>int)\b", 'int', "#31aade"),
-    RegexWord(r"\b(?P<float>float)\b", 'float', "#31aade"),
-    RegexWord(r"\b(?P<list>list)\b", 'list', "#31aade"),
-    RegexWord(r"\b(?P<List>List)\b", 'List', "#fff566"),
-    RegexWord(r"\b(?P<tuple>tuple)\b", 'tuple', "#31aade"),
-    RegexWord(r"\b(?P<Tuple>Tuple)\b", 'Tuple', "#fff566"),
+    Matching(r"(?:[(])(?P<arguments>[\w\[\]: ,*.']*)(?:[)])", 'arguments', "#f2a049"),
+    Matching(r"\b(?P<Union>Union)\b", 'Union', "#fff566"),
+    Matching(r"\b(?P<Callable>Callable)\b", 'Callable', "#fff566"),
+    Matching(r"\b(?P<Mapping>Mapping)\b", 'Mapping', "#fff566"),
+    Matching(r"\b(?P<str>str)\b", 'str', "#31aade"),
+    Matching(r"\b(?P<int>int)\b", 'int', "#31aade"),
+    Matching(r"\b(?P<float>float)\b", 'float', "#31aade"),
+    Matching(r"\b(?P<list>list)\b", 'list', "#31aade"),
+    Matching(r"\b(?P<List>List)\b", 'List', "#fff566"),
+    Matching(r"\b(?P<tuple>tuple)\b", 'tuple', "#31aade"),
+    Matching(r"\b(?P<Tuple>Tuple)\b", 'Tuple', "#fff566"),
 ]

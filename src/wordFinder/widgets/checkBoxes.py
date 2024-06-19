@@ -1,6 +1,6 @@
 import os
 import logging
-from typing import Optional, List, Mapping
+from typing import Mapping, Union, Any
 from functools import partial
 
 from PySide2 import QtCore, QtWidgets, QtGui
@@ -12,6 +12,7 @@ LOGGER.setLevel(20)
 
 
 class ModuleCheckBox(QtWidgets.QCheckBox):
+    """This is a basic checkBox witch can be store a path, used for modules"""
     def __init__(self, text, path):
         super().__init__()
 
@@ -19,8 +20,7 @@ class ModuleCheckBox(QtWidgets.QCheckBox):
         self.setText(text)
 
 
-class CheckBox(QtWidgets.QCheckBox):
-    """A checkbox with a path attribute where to store the module path."""
+class AbstractPackageCheckBox(QtWidgets.QCheckBox):
 
     onRightClick = QtCore.Signal()
 
@@ -45,39 +45,27 @@ class CheckBox(QtWidgets.QCheckBox):
         super().__init__(text, parent)
 
         self.path = path
-        self.modules = []
+        self.modules = {}
 
         self._connectUi()
         self.getModules(self.path)
-        print(self.modules)
 
         self.setStyleSheet(self.STYLESHEET)
 
     def _connectUi(self):
         self.onRightClick.connect(self.openModuleWindow)
 
-    def getModules(self, path):
-        for item in os.listdir(path):
-            itemPath = os.path.join(self.path, item)
-
-            if os.path.isdir(itemPath):
-                if item not in constants.EXCLUDED_DIRECTORIES:
-                    self.getModules(itemPath)
-
-            if item.partition('.')[-1] == 'py' and item not in constants.EXCLUDED_MODULES:
-                self.modules.append(itemPath)
-
-    def enterEvent(self, event):
+    def enterEvent(self, event: QtCore.QEvent) -> None:
         self.setProperty('hover', True)
         self.style().polish(self)
         event.accept()
 
-    def leaveEvent(self, event):
+    def leaveEvent(self, event: QtCore.QEvent) -> None:
         self.setProperty('hover', False)
         self.style().polish(self)
         event.accept()
 
-    def mousePressEvent(self, event):
+    def mousePressEvent(self, event: QtGui.QMouseEvent) -> None:
         if event.button() is QtCore.Qt.LeftButton:
             self.setChecked(not self.isChecked())
             event.accept()
@@ -86,64 +74,111 @@ class CheckBox(QtWidgets.QCheckBox):
             self.onRightClick.emit()
             event.accept()
 
-    def minimumSizeHint(self):
+    def minimumSizeHint(self) -> QtCore.QSize:
         return QtCore.QSize(100, 25)
 
-    def openModuleWindow(self):
+    def openModuleWindow(self) -> None:
+        """Pops up a window to display the modules, then, copy the modules that have a check state into the :attr:`modules`"""
         globalPos = QtGui.QCursor.pos()
-        self.moduleWindow = CheckBoxModulesWindow(self.path)
+
+        # Reset the modules.
+        self.getModules(self.path)
+
+        self.moduleWindow = CheckBoxModulesWindow(self.modules)
         self.moduleWindow.move(globalPos)
         self.moduleWindow.show()
-        self.modules = self.moduleWindow.modulesPaths
+
+        # Copy the checked modules to update the list.
+        self.modules = self.moduleWindow.activatedModules
+
+
+class LocalPackageCheckBox(AbstractPackageCheckBox):
+
+    def getModules(self, path: str) -> None:
+        """Get the module within the provided path.
+
+        Parameters:
+            path: The path where to search the modules.
+        """
+        for module in os.listdir(path):
+            modulePath = os.path.join(path, module)
+
+            if os.path.isdir(modulePath) and module not in constants.EXCLUDED_DIRECTORIES:
+                self.getModules(modulePath)
+
+            if module.rpartition('.')[-1] == 'py' and module not in constants.EXCLUDED_MODULES:
+                self.modules[module] = modulePath
+
+        LOGGER.debug("Modules from PackageCheckBox: {}".format(self.modules))
+
+
+class GitHubPackageCheckBox(AbstractPackageCheckBox):
+
+    def getModules(self, path: str) -> None:
+        """Get the module within the provided path.
+
+        Parameters:
+            path: The path where to search the modules.
+        """
+        return
+        for module in os.listdir(path):
+            modulePath = os.path.join(path, module)
+
+            if os.path.isdir(modulePath) and module not in constants.EXCLUDED_DIRECTORIES:
+                self.getModules(modulePath)
+
+            if module.rpartition('.')[-1] == 'py' and module not in constants.EXCLUDED_MODULES:
+                self.modules[module] = modulePath
+
+        LOGGER.debug("Modules from PackageCheckBox: {}".format(self.modules))
 
 
 class CheckBoxModulesWindow(QtWidgets.QWidget):
-    STYLESHEET = \
-    """
-    {
-    background-color: rgb(70, 70, 70);
-    margin: 1em;
-    padding: 1em;
-    }
-    """
-    def __init__(self, modulePath, parent=None):
+    def __init__(self, innerModules: Mapping[Union[str, Any], Union[str, Any]], parent=None):
+        """This is the window that pops when the user left-click on a packageCheckBox
+
+        Parameters:
+            innerModules: The modules to display.
+        """
         super().__init__(parent=parent)
 
-        self.modulePath = modulePath
-        self.modulesPaths = []
+        self.innerModules = innerModules
+        self.activatedModules = {}
 
         self._buildWindow()
 
     def _buildWindow(self):
         self.mainLayout = QtWidgets.QVBoxLayout(self)
-        self.getModule(self.modulePath)
+
+        for module, modulePath in self.innerModules.items():
+            newCheckBox = ModuleCheckBox(module, modulePath)
+            self.activatedModules[module] = modulePath
+            newCheckBox.setChecked(True)
+            newCheckBox.stateChanged.connect(partial(self.updateActivatedModules, module, modulePath))
+            self.mainLayout.addWidget(newCheckBox)
+
         self.setWindowFlags(QtCore.Qt.FramelessWindowHint)
 
-    def getModule(self, path):
-        self.modulesPaths.clear()
+    def updateActivatedModules(self, moduleName: str, modulePath: str, state: bool) -> None:
+        """Updates the :attr:`activatedModules` depending on the state of the provided moduleName.
 
-        for item in os.listdir(path):
-            itemPath = os.path.join(path, item)
-
-            if os.path.isdir(itemPath):
-                if item not in constants.EXCLUDED_DIRECTORIES:
-                    self.getModule(itemPath)
-
-            if item.partition('.')[-1] == 'py' and item not in constants.EXCLUDED_MODULES:
-                newCheckBox = ModuleCheckBox(item, itemPath)
-                newCheckBox.path = itemPath
-                newCheckBox.setChecked(True)
-
-                self.mainLayout.addWidget(newCheckBox)
-                self.modulesPaths.append(itemPath)
-                newCheckBox.clicked.connect(partial(self.updateModuleList, newCheckBox))
-
-    def updateModuleList(self, module):
-        if module.isChecked():
-            self.modulesPaths.append(module.path)
+        Parameters:
+            moduleName: The name of the module.
+            modulePath: The path of the module.
+            state: id true, the module will be append to the :attr:`activatedModules`, otherwise, this module will be removed.
+        """
+        if state:
+            self.activatedModules[moduleName] = modulePath
             return
 
-        self.modulesPaths.remove(module.path)
+        self.activatedModules.pop(moduleName)
 
-    def leaveEvent(self, event):
+    def mouseMoveEvent(self, event: QtGui.QMouseEvent) -> None:
+        """Unchecks the moduleCheckBox under the cursor."""
+        mousePov = event.pos()
+        if self.childAt(mousePov):
+            self.childAt(mousePov).setChecked(False)
+
+    def leaveEvent(self, event: QtCore.QEvent) -> None:
+        """Delete the window when the user move the cursor outside this window."""
         self.deleteLater()

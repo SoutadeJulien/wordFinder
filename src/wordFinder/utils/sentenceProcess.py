@@ -20,19 +20,20 @@ def isLineValid(line: str) -> bool:
     return True
 
 
-def wordInLine(word: str, line: str, isLitteral) -> bool:
+def wordInLine(word: str, line: str, isLiteral: bool) -> bool:
         """Gets if the provided line contains the provided word.
 
-        There is two way to search the word, with a simple check or with a regex.
+        There is two ways to search the word, with a simple check or with a regex.
 
         Parameters:
+            isLiteral: If true, the method will search if the provided word is in the sentence, if false, the method will search the word using a regex.
             word: The word to search.
             line: The line that is used to search for the word.
 
         Returns:
             True if the line contains the word, else False.
         """
-        if isLitteral:
+        if isLiteral:
             if word in line:
                 return True
 
