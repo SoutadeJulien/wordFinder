@@ -7,18 +7,15 @@ from PySide2.QtCore import Qt
 
 import core
 
-wordFinderPath = os.path.dirname(os.path.abspath(os.path.dirname(__file__)))
+WORD_FINDER_PATH = os.path.dirname(os.path.abspath(os.path.dirname(__file__)))
 
-def isPathAppended():
-    for modulePath in sys.path:
-        if modulePath == wordFinderPath:
-            return True
-    return False
 
-if not isPathAppended():
-    sys.path.append(wordFinderPath)
+if not core.isPathAppended(WORD_FINDER_PATH):
+    sys.path.append(WORD_FINDER_PATH)
+
 
 from wordFinder import wordFinderUi
+
 
 qApp = QtWidgets.QApplication()
 qApp.setStyle("Fusion")
@@ -46,10 +43,5 @@ if not core.getConfig():
     core.makeDefaultConfig()
 
 wfUi = wordFinderUi.WordFinder()
-
-
 wfUi.show()
 qApp.exec_()
-
-def testing():
-    pass
