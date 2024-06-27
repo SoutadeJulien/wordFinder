@@ -570,7 +570,7 @@ class GitHubModuleWidget(AbstractModuleWidget):
 
         for number, line in enumerate(decodedContent.splitlines()):
             if number == lineNumber - index:
-                self.output.appendHtml("<font color='grey'>{}</font> <span>&#8594;</span> <font color='grey'>line {}</font> <span>&#8594;</span> <font color' -> ''>{}</font>".format(moduleName, lineNumber, line))
+                self.output.appendHtml("<font color='grey'>{}</font> <span>&#8594;</span> <font color='grey'>line {}</font> <span>&#8594;</span> <font color' -> {}</font>".format(moduleName, lineNumber, line))
                 index -= 1
 
                 if index == 0:
@@ -589,7 +589,7 @@ class GitHubModuleWidget(AbstractModuleWidget):
 
         for number, line in enumerate(decodedContent.splitlines()):
             if number == lineNumber + index:
-                self.output.appendHtml("<font color='grey'>{}</font> <span>&#8594;</span> <font color='grey'>line {}</font> <span>&#8594;</span> <font color' -> ''>{}</font>".format(moduleName, lineNumber, line))
+                self.output.appendHtml("<font color='grey'>{}</font> <span>&#8594;</span> <font color='grey'>line {}</font> <span>&#8594;</span> <font color' -> {}</font>".format(moduleName, lineNumber, line))
                 index += 1
                 if index == int(numberOfExtraLine) + 1:
                     self.output.appendHtml('')
