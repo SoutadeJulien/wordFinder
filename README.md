@@ -11,8 +11,8 @@
 
 <br>
 
->Word finder has two dependency that is [PyGithub](https://github.com/PyGithub/PyGithub) which allows to get an access to the GitHub repositories,
->and PySide 2
+>Word Finder has two dependencies: [PyGithub](https://github.com/PyGithub/PyGithub) which allows access to GitHub repositories, and PySide2.
+
 - Run .wordFinderStart.bat
 - Change the search path. Then, you can search for a word or a sentence in the packages within the search path.
 
