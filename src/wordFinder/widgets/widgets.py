@@ -236,6 +236,8 @@ class AbstractModuleWidget(QtWidgets.QWidget):
         self.checkAllLayout = QtWidgets.QHBoxLayout()
         self.modulesWidgets = QtWidgets.QWidget()
 
+        self.matchingCount = QtWidgets.QLabel()
+
         self.output = OutputWidget()
 
         self.checkAllButton = PushButton("Check all")
@@ -249,6 +251,7 @@ class AbstractModuleWidget(QtWidgets.QWidget):
         self.checkAllLayout.addWidget(self.checkAllButton)
         self.checkAllLayout.addWidget(self.uncheckAllButton)
 
+        self.mainLayout.addWidget(self.matchingCount)
         self.mainLayout.addWidget(self.output)
 
         self.checkAllLayout.addStretch()
@@ -257,6 +260,7 @@ class AbstractModuleWidget(QtWidgets.QWidget):
         self.uncheckAllButton.setFocusPolicy(QtCore.Qt.NoFocus)
         self.output.setFont(QtGui.QFont('Arial', 13))
         self.output.setReadOnly(True)
+        self.matchingCount.setStyleSheet("background-color: transparent;")
 
     def _connectUi(self):
         self.checkAllButton.clicked.connect(self.checkAllCheckBoxes)
@@ -384,6 +388,7 @@ class LocalModuleWidget(AbstractModuleWidget):
         """
         self.output.clear()
         modulesWithPrints = []
+        matchCount = 0
 
         for checkBox in self.checkedModules:
             for modulePath in checkBox.modules.values():
@@ -393,6 +398,8 @@ class LocalModuleWidget(AbstractModuleWidget):
                         for lineNumber, line in enumerate(lines, start=1):
                             if sentenceProcess.wordInLine(word, line, isLiteral):
                                 modulesWithPrints.append(modulePath)
+                                matchCount += 1
+                                self.matchingCount.setText("The word is found {} time".format(matchCount))
                                 if showContext:
                                     self.displayPreviousLines(numberOfExtraLine, modulePath, lineNumber)
                                 # Colorize the line dependent on the syntax.
@@ -526,6 +533,7 @@ class GitHubModuleWidget(AbstractModuleWidget):
         """
         self.output.clear()
         modulesWithPrints = []
+        matchCount = 0
 
         for checkBox in self.checkedModules:
             for content in auth.getContent(checkBox.text(), ""):
@@ -534,6 +542,8 @@ class GitHubModuleWidget(AbstractModuleWidget):
                     for lineNumber, line in enumerate(decodedContent.splitlines()):
                         if sentenceProcess.wordInLine(word, line, isLiteral):
                             modulesWithPrints.append(checkBox.text())
+                            matchCount += 0
+
                             if showContext:
                                 self.displayPreviousLines(numberOfExtraLine, content.path, decodedContent, lineNumber)
 
@@ -547,6 +557,7 @@ class GitHubModuleWidget(AbstractModuleWidget):
                                     processedLine
                                 )
                             )
+                            self.matchingCount.setText("The word is found {} time".format(matchCount))
 
                             if showContext:
                                 self.displayNextLines(numberOfExtraLine, content.path, decodedContent, lineNumber)
