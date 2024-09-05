@@ -421,7 +421,7 @@ class LocalModuleWidget(AbstractModuleWidget):
 
         if not modulesWithPrints:
             self.output.appendPlainText('The word "{}" has not been found'.format(word))
-
+            self.matchingCount.setText("The word is found {} time".format(matchCount))
 
     def displayPreviousLines(self, numberOfExtraLine: int, modulePath: str, lineNumber: int) -> None:
         """Opens the provided module to find the [x] lines before the provided line and appends them to the output window.
@@ -567,6 +567,7 @@ class GitHubModuleWidget(AbstractModuleWidget):
 
             if not modulesWithPrints:
                 self.output.appendPlainText('The word "{}" has not been found'.format(word))
+                self.matchingCount.setText("The word is found {} time".format(matchCount))
 
     def displayPreviousLines(self, numberOfExtraLine: int, moduleName: str, decodedContent: str, lineNumber: int) -> None:
         """Opens the provided module to find the [x] lines before the provided line and appends them to the output window.
