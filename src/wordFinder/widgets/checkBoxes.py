@@ -172,7 +172,8 @@ class CheckBoxModulesWindow(QtWidgets.QWidget):
         mousePov = event.pos()
         if self.childAt(mousePov):
             self.childAt(mousePov).setChecked(False)
+            super().mouseMoveEvent(event)
 
-    def leaveEvent(self, event: QtCore.QEvent) -> None:
-        """Delete the window when the user move the cursor outside this window."""
+    def leaveEvent(self, event: QtGui.QDragLeaveEvent) -> None:
         self.deleteLater()
+        super().leaveEvent(event)

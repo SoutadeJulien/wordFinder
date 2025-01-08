@@ -1,6 +1,6 @@
 import os
 import logging
-from typing import Optional, List
+from typing import Optional, List, Union, Generator
 
 from PySide2 import QtCore, QtWidgets, QtGui
 
@@ -40,6 +40,8 @@ class PushButton(QtWidgets.QPushButton):
         border-color: rgb(93, 93, 93);
         border-width: 1px;
         border-radius: 5px;
+        padding: 5px;
+        min-width: 100%;
     }
     PushButton:hover {
         background-color: #707070;
@@ -53,7 +55,7 @@ class PushButton(QtWidgets.QPushButton):
         self.setStyleSheet(self.STYLESHEET)
         
     def minimumSizeHint(self):
-        return QtCore.QSize(200, 25)
+        return QtCore.QSize(230, 25)
 
 
 class OutputWidget(QtWidgets.QPlainTextEdit):
@@ -304,7 +306,7 @@ class AbstractModuleWidget(QtWidgets.QWidget):
                 column = 0
                 row += 1
 
-    def modules(self) -> str:
+    def modules(self) -> Generator:
         """Yields the module name within the :attr:`searchPath` folder."""
         for repo in auth.gitHubRepositories():
             if repo not in constants.EXCLUDED_MODULES:
@@ -359,7 +361,7 @@ class LocalModuleWidget(AbstractModuleWidget):
         if checkBox.text() in checkedBoxes:
             return True
 
-    def modules(self) -> str:
+    def modules(self) -> Union[Generator, None]:
         """Yields the module name within the :attr:`searchPath` folder."""
         if not self._searchPath:
             return None
@@ -648,7 +650,6 @@ class StackModulesWidget(QtWidgets.QTabWidget):
         super().__init__(parent)
 
         self.searchPath = searchPath
-
         self._buildWidget()
 
     def _buildWidget(self):

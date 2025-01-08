@@ -48,10 +48,9 @@ class WordFinder(QtWidgets.QDialog):
 
         # Ui setup.
         self.devModeAction = self.uiSetup.addAction('Dev mode')
-
         self.layoutAction = self.uiSetup.addAction('Layout')
-
         self.syntaxAction = self.uiSetup.addAction('Syntax highlighting')
+        self.refreshAction = self.uiSetup.addAction('Refresh')
 
         # GitHub setup.
         self.githubTokenAction = self.githubSetup.addAction("Set GitHub personal access token")
@@ -140,6 +139,7 @@ class WordFinder(QtWidgets.QDialog):
         self.devModeAction.triggered.connect(self._devMode)
         self.layoutAction.triggered.connect(self.onLayoutActionTriggered)
         self.syntaxAction.triggered.connect(self.onSyntaxActionTriggered)
+        self.refreshAction.triggered.connect(self.refreshModules)
         self.githubTokenAction.triggered.connect(self.onGithubTokenActionTriggered)
         self.setSearchPathButton.clicked.connect(self.setSearchPath)
         self.checkButton.clicked.connect(self.searchWord)
